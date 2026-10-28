@@ -153,6 +153,8 @@ function Scene({ progress, onFrame }) {
   }, [gl, scene])
 
   const v = useMemo(() => new THREE.Vector3(), [])
+  const foot = useMemo(() => new THREE.Vector3(), [])
+  const up = useMemo(() => new THREE.Vector3(), [])
   const out = useMemo(
     () => ({ dim: { x: 0, top: 0, bottom: 0, show: 0 }, cupL: 0, cupR: 0, width: 0, labels: LABELS.map(() => ({ ax: 0, ay: 0, a: 0 })) }),
     [],
@@ -282,13 +284,21 @@ function Scene({ progress, onFrame }) {
     const fov = (camera.fov * Math.PI) / 180
     const aspect = size.width / size.height
     const pour = S(0.17, 0.26, p) - S(0.84, 0.92, p)
-    const needH = lerp(4.9, 6.0, pour)
-    const needW = aspect < 0.9 ? 5.2 : 4.4
+    const needH = lerp(5.0, 5.5, pour)
+    const needW = aspect < 0.9 ? 4.8 : 4.4
     const dist = Math.max(needH / (2 * Math.tan(fov / 2)), needW / (2 * Math.tan(fov / 2) * aspect))
     const elev = lerp(0.3, 0.95, S(0.08, 0.27, p)) - 0.65 * S(0.86, 0.97, p)
     const ty = lerp(1.45, 1.8, pour)
     camera.position.set(0.2, ty + Math.sin(elev) * dist, Math.cos(elev) * dist)
     camera.lookAt(0.2, ty, 0)
+    camera.updateMatrixWorld()
+    foot.set(0, 0, 0.9)
+    const depth = camera.position.distanceTo(foot)
+    foot.project(camera)
+    up.set(0, 1, 0).applyQuaternion(camera.quaternion)
+    const ready = S(0.84, 0.9, p)
+    const baseAt = aspect < 0.9 ? lerp(-0.42, -0.2, ready) : lerp(-0.6, -0.5, ready)
+    camera.position.addScaledVector(up, (foot.y - baseAt) * depth * Math.tan(fov / 2))
     camera.updateMatrixWorld()
 
     const proj = (x, y, z) => {
@@ -336,7 +346,7 @@ function Scene({ progress, onFrame }) {
       <directionalLight position={[-4, 3, -3]} intensity={0.7} color="#fff1d6" />
 
       <mesh rotation-x={-Math.PI / 2} position={[0, -0.02, 0]}>
-        <planeGeometry args={[5.5, 5.5]} />
+        <planeGeometry args={[4.4, 4.4]} />
         <meshBasicMaterial map={parts.shadow} transparent opacity={0.7} depthWrite={false} />
       </mesh>
 

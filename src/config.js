@@ -1,7 +1,7 @@
 export const CONFIG = {
   brand: 'Wafer Dessert & Burmese Tea',
   shopName: 'ဆရာကြီး',
-  siteUrl: '',
+  siteUrl: 'https://wafer-burmese-tea.vercel.app',
   tagline: 'A Taste of Burmese Childhood, Shared with Everyone.',
   burmeseLine: 'ဝေဖာယိုသုပ် + မြန်မာလက်ဖက်ရည်',
 

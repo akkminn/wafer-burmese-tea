@@ -611,3 +611,46 @@ aside.order {
   border: 1px solid #d5e4d9;
   box-shadow: 0 14px 26px -18px rgba(7, 40, 22, 0.6);
 }
+
+.play-toggle {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  display: grid;
+  place-items: center;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+}
+.play-icon {
+  display: grid;
+  place-items: center;
+  width: 76px;
+  height: 76px;
+  border-radius: 50%;
+  background: rgba(255, 248, 229, 0.94);
+  color: var(--navy);
+  padding-left: 4px;
+  box-shadow: 0 10px 24px -10px rgba(0, 0, 0, 0.55);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+.play-toggle.is-playing .play-icon {
+  opacity: 0;
+  padding-left: 0;
+  transform: scale(0.85);
+}
+.play-toggle.is-playing:hover .play-icon,
+.play-toggle.is-playing:focus-visible .play-icon {
+  opacity: 1;
+  transform: none;
+}
+.play-toggle:focus-visible {
+  outline: 3px solid var(--gold);
+  outline-offset: -6px;
+}
+@media (hover: none) {
+  .play-toggle.is-playing:active .play-icon {
+    opacity: 1;
+    transform: none;
+  }
+}

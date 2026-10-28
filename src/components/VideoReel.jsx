@@ -51,40 +51,66 @@ function EndCard() {
           <span>{e.campus}</span>
         </div>
       </motion.div>
-      <motion.p className="end-note" variants={pop}>All profits will be donated</motion.p>
+      <motion.p className="end-note" variants={pop}>
+        Pre-orders close {CONFIG.preorder.closesLabel}
+        <br />
+        All profits will be donated
+      </motion.p>
     </motion.div>
   )
 }
 
-function VideoCard({ v, n, onDead }) {
+function PlayIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true">
+      <path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z" fill="currentColor" />
+    </svg>
+  )
+}
+
+function PauseIcon() {
+  return (
+    <svg viewBox="0 0 24 24" width="34" height="34" aria-hidden="true">
+      <rect x="6" y="5" width="4.5" height="14" rx="1.2" fill="currentColor" />
+      <rect x="13.5" y="5" width="4.5" height="14" rx="1.2" fill="currentColor" />
+    </svg>
+  )
+}
+
+function VideoCard({ v, onDead }) {
   const box = useRef(null)
   const vid = useRef(null)
   const [t, setT] = useState(0)
   const [len, setLen] = useState(0)
   const [failed, setFailed] = useState(false)
   const [muted, setMuted] = useState(true)
-  const [inView, setInView] = useState(false)
+  const [started, setStarted] = useState(false)
+  const [playing, setPlaying] = useState(false)
 
   useEffect(() => {
-    const io = new IntersectionObserver(([en]) => setInView(en.isIntersecting && en.intersectionRatio > 0.6), {
-      threshold: [0, 0.6, 1],
-    })
+    const io = new IntersectionObserver(([en]) => {
+      if (!en.isIntersecting) vid.current?.pause()
+    }, { threshold: 0.3 })
     if (box.current) io.observe(box.current)
     return () => io.disconnect()
   }, [])
 
   useEffect(() => {
+    if (started) vid.current?.play().catch(() => {})
+  }, [started])
+
+  const toggle = () => {
     const el = vid.current
-    if (!el || failed) return
-    if (inView) el.play().catch(() => {})
-    else el.pause()
-  }, [inView, failed])
+    if (!started) setStarted(true)
+    else if (el?.paused) el.play().catch(() => {})
+    else el?.pause()
+  }
 
   useEffect(() => {
-    if (!failed || !inView) return
+    if (!failed || !playing) return
     const id = setInterval(() => setT((x) => (x + 0.25) % DEMO_LENGTH), 250)
     return () => clearInterval(id)
-  }, [failed, inView])
+  }, [failed, playing])
 
   useEffect(() => {
     if (failed && !import.meta.env.DEV) onDead(v.id)
@@ -115,27 +141,20 @@ function VideoCard({ v, n, onDead }) {
         ) : (
           <video
             ref={vid}
-            src={v.src}
+            src={started ? v.src : undefined}
             poster={v.poster}
             muted={muted}
             loop
             playsInline
-            preload="metadata"
+            preload="none"
             onLoadedMetadata={(e) => setLen(e.currentTarget.duration || 0)}
             onTimeUpdate={(e) => setT(e.currentTarget.currentTime)}
-            onError={() => setFailed(true)}
+            onPlay={() => setPlaying(true)}
+            onPause={() => setPlaying(false)}
+            onError={() => started && setFailed(true)}
           />
         )}
-        <div className="shade" />
-
-        <div className="screen-top">
-          <span className="goal"><i>{String(n + 1).padStart(2, '0')}</i> {v.goal}</span>
-          {!failed && (
-            <button type="button" className="sound" onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Turn sound on' : 'Turn sound off'}>
-              {muted ? '🔇' : '🔊'}
-            </button>
-          )}
-        </div>
+        {ending && <div className="shade" />}
 
         <AnimatePresence>{ending && <EndCard key="end" />}</AnimatePresence>
 
@@ -157,6 +176,22 @@ function VideoCard({ v, n, onDead }) {
             </AnimatePresence>
           </div>
         )}
+
+        <button
+          type="button"
+          className={`play-toggle ${playing ? 'is-playing' : ''}`}
+          onClick={failed ? () => setPlaying((x) => !x) : toggle}
+          aria-label={playing ? `Pause video: ${v.title}` : `Play video: ${v.title}`}
+        >
+          <span className="play-icon">{playing ? <PauseIcon /> : <PlayIcon />}</span>
+        </button>
+
+        {!failed && started && (
+          <button type="button" className="sound" onClick={() => setMuted((m) => !m)} aria-label={muted ? 'Turn sound on' : 'Turn sound off'}>
+            {muted ? '🔇' : '🔊'}
+          </button>
+        )}
+
         <div className="progress" aria-hidden="true">
           <span style={{ width: duration ? `${Math.min(100, (t / duration) * 100)}%` : 0 }} />
         </div>
@@ -217,8 +252,8 @@ export default function VideoReel() {
         onPointerUp={onUp}
         onPointerLeave={onUp}
       >
-        {VIDEOS.map((v, i) => (
-          <VideoCard key={v.id} v={v} n={i} onDead={onDead} />
+        {VIDEOS.map((v) => (
+          <VideoCard key={v.id} v={v} onDead={onDead} />
         ))}
       </div>
     </section>

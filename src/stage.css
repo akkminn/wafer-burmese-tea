@@ -456,10 +456,7 @@
 .tea-canvas {
   position: absolute;
   z-index: 2;
-  top: 8vh;
-  bottom: 24vh;
-  left: 0;
-  right: 0;
+  inset: 0;
 }
 .t3d {
   position: relative;
@@ -544,10 +541,6 @@
 @media (max-width: 820px) {
   .tea-scroll {
     height: 640vh;
-  }
-  .tea-canvas {
-    top: 9vh;
-    bottom: 27vh;
   }
 }
 

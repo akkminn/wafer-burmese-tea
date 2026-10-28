@@ -51,7 +51,6 @@ export const COMBOS = [
 export const VIDEOS = [
   {
     id: 'tea1',
-    goal: 'Awareness',
     title: 'Burmese tea and wafer, ready to go',
     src: 'videos/tea-1.mp4',
     poster: 'videos/tea-1.jpg',
