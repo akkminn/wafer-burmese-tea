@@ -1,4 +1,5 @@
 import { motion, useTransform } from 'framer-motion'
+import { labelSides } from '../waferLabels.js'
 
 export const VIEW = { w: 800, h: 640 }
 const CX = 400
@@ -160,6 +161,7 @@ export default function WaferStack({ layers, explode, boxO, label }) {
     ys.push(y)
     y -= KIND[layers[i]].t
   }
+  const sides = labelSides(layers)
   const labelO = useTransform(explode, [0.7, 1], [0, 1])
   const shadowO = useTransform(explode, [0, 1], [0.35, 0.16])
   const lift = useTransform(explode, [0, 1], [-175, 0])
@@ -177,7 +179,8 @@ export default function WaferStack({ layers, explode, boxO, label }) {
       <Box boxO={boxO} part="front" />
 
       {layers.map((k, i) => {
-        const left = i % 2 === 0
+        if (!sides[i]) return null
+        const left = sides[i] === 'left'
         const hw = (W - KIND[k].inset * 2) / 2
         const cy = ys[i] + H - i * GAP
         const dotX = left ? CX - hw : CX + hw

@@ -31,25 +31,29 @@ const S = (a, b, x) => {
 const clamp01 = (x) => Math.min(1, Math.max(0, x))
 const lerp = (a, b, t) => a + (b - a) * t
 
-const MILK = new THREE.Color('#f4e6c2')
-const TEA = new THREE.Color('#bf8446')
+const TEA = new THREE.Color('#a8651f')
+const MILK_TEA = new THREE.Color('#d6a870')
 const DROP_MILK = new THREE.Color('#fbf1da')
 const DROP_TEA = new THREE.Color('#b9742f')
 const RIPPLE_MILK = new THREE.Color('#fffaf0')
 const RIPPLE_TEA = new THREE.Color('#f6dfae')
+const TEA_STREAM = new THREE.Color('#b8702a')
+const MILK_TEA_STREAM = new THREE.Color('#cf9a5c')
 const LEVEL_MAX = 0.86
-const MILK_LEVEL = 0.24
+const TEA_LEVEL = 0.5
+const MILK_ADD = 0.16
 
 const Y_TOP = 6.9 // the streams start above the picture
 const PX = 0.08 // where the streams land
 
-const MILK_T = { start: 0.22, headDur: 0.03, end: 0.36, tailDur: 0.03 }
-const TEA_T = { start: 0.53, headDur: 0.03, end: 0.8, tailDur: 0.035 }
+const TEA_T = { start: 0.22, headDur: 0.03, end: 0.36, tailDur: 0.03 }
+const MILK_T = { start: 0.39, headDur: 0.03, end: 0.5, tailDur: 0.03 }
+const PULL_T = { start: 0.68, headDur: 0.03, end: 0.79, tailDur: 0.035 }
 
 const CUBES = [
-  { x: -0.3, z: 0.14, s: 0.395 },
-  { x: 0.34, z: -0.18, s: 0.43 },
-  { x: 0.02, z: 0.3, s: 0.465 },
+  { x: -0.3, z: 0.14, s: 0.535 },
+  { x: 0.34, z: -0.18, s: 0.57 },
+  { x: 0.02, z: 0.3, s: 0.605 },
 ]
 const CUBE_FALL = 0.04
 const CUBE_SINK = 0.025
@@ -66,10 +70,10 @@ const STEAM = Array.from({ length: 14 }, (_, i) => ({
 /** labels that point at what is being added; w = [fade in start, fade in end, fade out start, fade out end] */
 const LABELS = [
   { id: 'lid1', en: 'Sip lid', my: 'အဖုံး', side: 'left', w: [-0.01, 0, 0.075, 0.1] },
-  { id: 'milk', en: 'Milk', my: 'နို့', side: 'left', w: [0.225, 0.25, 0.36, 0.39] },
-  { id: 'sugar', en: 'Sugar', my: 'သကြား', side: 'right', w: [0.395, 0.415, 0.5, 0.525] },
-  { id: 'tea', en: 'Strong tea', my: 'လက်ဖက်ရည်ပြင်း', side: 'left', w: [0.54, 0.57, 0.78, 0.81] },
-  { id: 'steam', en: 'Steaming hot', my: 'ပူပူလေး', side: 'right', w: [0.6, 0.64, 0.84, 0.88] },
+  { id: 'tea', en: 'Strong tea', my: 'လက်ဖက်ရည်ပြင်း', side: 'left', w: [0.225, 0.25, 0.36, 0.39] },
+  { id: 'milk', en: 'Milk', my: 'နို့', side: 'right', w: [0.395, 0.415, 0.5, 0.525] },
+  { id: 'sugar', en: 'Sugar', my: 'သကြား', side: 'left', w: [0.53, 0.55, 0.655, 0.68] },
+  { id: 'steam', en: 'Steaming hot', my: 'ပူပူလေး', side: 'right', w: [0.69, 0.72, 0.84, 0.88] },
   { id: 'lid2', en: 'Sip lid on', my: 'အဖုံး', side: 'left', w: [0.93, 0.96, 1.02, 1.03] },
 ]
 
@@ -120,7 +124,7 @@ function Scene({ progress, onFrame }) {
       slotMat: new THREE.MeshBasicMaterial({ color: '#0a0504', polygonOffset: true, polygonOffsetFactor: -3 }),
 
       liquidGeo: makeLiquidGeometry(),
-      liquidMat: new THREE.MeshPhysicalMaterial({ color: MILK.clone(), roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 1.1, side: THREE.DoubleSide }),
+      liquidMat: new THREE.MeshPhysicalMaterial({ color: TEA.clone(), roughness: 0.1, clearcoat: 1, clearcoatRoughness: 0.08, envMapIntensity: 1.1, side: THREE.DoubleSide }),
       foamMat: new THREE.MeshStandardMaterial({ map: makeFoamTexture(), roughness: 0.55, transparent: true, opacity: 0, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -1 }),
 
       milkGeo: makeStreamGeometry(),
@@ -176,8 +180,9 @@ function Scene({ progress, onFrame }) {
     }
 
     const ms = streamState(MILK_T, p)
-    const ts = streamState(TEA_T, p)
-    const level = MILK_LEVEL * S(0.245, 0.365, p) + (LEVEL_MAX - MILK_LEVEL) * S(0.555, 0.8, p)
+    const pulling = p > 0.6
+    const ts = streamState(pulling ? PULL_T : TEA_T, p)
+    const level = TEA_LEVEL * S(0.245, 0.365, p) + MILK_ADD * S(0.415, 0.505, p) + (LEVEL_MAX - TEA_LEVEL - MILK_ADD) * S(0.705, 0.8, p)
     if (Math.abs(level - lastLevel.current) > 1e-4) {
       setLiquid(parts.liquidGeo, Math.max(level, 0.004))
       lastLevel.current = level
@@ -186,14 +191,15 @@ function Scene({ progress, onFrame }) {
     const surfR = innerR(topY) - 0.06
     if (liquid.current) {
       liquid.current.visible = level > 0.004
-      parts.liquidMat.color.copy(MILK).lerp(TEA, S(0.56, 0.78, p))
+      parts.liquidMat.color.copy(TEA).lerp(MILK_TEA, S(0.42, 0.52, p))
     }
 
     if (milkS.current) {
       milkS.current.visible = shapeStream(parts.milkGeo, { x: PX, z: 0, yTop: Y_TOP, yHit: topY, head: ms.head, tail: ms.tail, flow: ms.flow, r0: 0.066, narrow: 0.45, wob: 0.14, sway: 0.035, lean: 0.4, t })
     }
     if (teaS.current) {
-      const pull = S(0.66, 0.74, p) // poured from higher: thinner, swaying
+      const pull = pulling ? 1 : 0 // poured from high: thinner, swaying
+      parts.teaStreamMat.color.copy(pulling ? MILK_TEA_STREAM : TEA_STREAM)
       teaS.current.visible = shapeStream(parts.teaGeo, { x: PX, z: 0, yTop: Y_TOP, yHit: topY, head: ts.head, tail: ts.tail, flow: ts.flow, r0: lerp(0.046, 0.038, pull), narrow: 0.5, wob: 0.1, sway: lerp(0.025, 0.1, pull), lean: lerp(0.3, 0.55, pull), t })
     }
 
@@ -259,7 +265,7 @@ function Scene({ progress, onFrame }) {
       parts.foamMat.opacity = amt * 0.92
     }
 
-    const steamAmt = S(0.55, 0.66, p)
+    const steamAmt = S(0.26, 0.38, p)
     const slotX = 0.504 * Math.cos(yaw) + 0.622 * Math.sin(yaw)
     const slotZ = -0.504 * Math.sin(yaw) + 0.622 * Math.cos(yaw)
     const shown = Math.round(lerp(4, 14, open))
@@ -284,8 +290,8 @@ function Scene({ progress, onFrame }) {
     const fov = (camera.fov * Math.PI) / 180
     const aspect = size.width / size.height
     const pour = S(0.17, 0.26, p) - S(0.84, 0.92, p)
-    const needH = lerp(5.0, 5.5, pour)
-    const needW = aspect < 0.9 ? 4.8 : 4.4
+    const needH = aspect < 0.9 ? lerp(5.9, 6.5, pour) : lerp(6.5, 7.1, pour)
+    const needW = aspect < 0.9 ? 5.3 : 5.6
     const dist = Math.max(needH / (2 * Math.tan(fov / 2)), needW / (2 * Math.tan(fov / 2) * aspect))
     const elev = lerp(0.3, 0.95, S(0.08, 0.27, p)) - 0.65 * S(0.86, 0.97, p)
     const ty = lerp(1.45, 1.8, pour)
@@ -297,7 +303,7 @@ function Scene({ progress, onFrame }) {
     foot.project(camera)
     up.set(0, 1, 0).applyQuaternion(camera.quaternion)
     const ready = S(0.84, 0.9, p)
-    const baseAt = aspect < 0.9 ? lerp(-0.42, -0.2, ready) : lerp(-0.6, -0.5, ready)
+    const baseAt = aspect < 0.9 ? lerp(-0.28, -0.08, ready) : lerp(-0.6, -0.5, ready)
     camera.position.addScaledVector(up, (foot.y - baseAt) * depth * Math.tan(fov / 2))
     camera.updateMatrixWorld()
 

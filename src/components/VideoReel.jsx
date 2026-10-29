@@ -1,64 +1,9 @@
 import { useEffect, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'framer-motion'
 import { VIDEOS } from '../data.js'
-import { CONFIG } from '../config.js'
-import QR from './QR.jsx'
 import { StackIcon } from './Icons.jsx'
 
 const DEMO_LENGTH = 15 // seconds the overlay demo runs when a video file is missing (dev only)
-const END_SECONDS = 3 // videos without an `endAt` show the info card for their last few seconds
-const { prices } = CONFIG
-const waferMin = Math.min(...Object.values(prices.wafer))
-const waferMax = Math.max(...Object.values(prices.wafer))
-
-const pop = {
-  hidden: { opacity: 0, y: 14 },
-  show: { opacity: 1, y: 0 },
-}
-
-function EndCard() {
-  const e = CONFIG.event
-  return (
-    <motion.div
-      className="end-card"
-      initial="hidden"
-      animate="show"
-      exit={{ opacity: 0 }}
-      transition={{ staggerChildren: 0.09, delayChildren: 0.05 }}
-    >
-      <motion.div className="end-brand" variants={pop}>
-        <img src="img/logo-sticker.webp" alt="" width="44" height="44" />
-        <span lang="my">{CONFIG.shopName}</span>
-      </motion.div>
-      <motion.h4 variants={pop}>{CONFIG.brand}</motion.h4>
-      <motion.p className="end-offer" variants={pop}>
-        Pre-order · ฿{CONFIG.preorder.discount} off every item
-      </motion.p>
-      <motion.ul className="end-prices" variants={pop} aria-label="Prices">
-        <li>Wafer <b>฿{waferMin}-{waferMax}</b></li>
-        <li>Tea <b>฿{prices.tea}</b></li>
-        <li>Combo from <b>฿{waferMin + prices.tea - prices.comboSaving}</b></li>
-      </motion.ul>
-      <motion.div className="end-where" variants={pop}>
-        <div className="end-qr">
-          <QR size={84} />
-          <small>Scan to pre-order</small>
-        </div>
-        <div className="end-info">
-          <strong>{e.dayMonth} · {e.timeLabel}</strong>
-          <span>{e.place}</span>
-          <span>{e.placeDetail}</span>
-          <span>{e.campus}</span>
-        </div>
-      </motion.div>
-      <motion.p className="end-note" variants={pop}>
-        Pre-orders close {CONFIG.preorder.closesLabel}
-        <br />
-        All profits will be donated
-      </motion.p>
-    </motion.div>
-  )
-}
 
 function PlayIcon() {
   return (
@@ -117,7 +62,6 @@ function VideoCard({ v, onDead }) {
   }, [failed, onDead, v.id])
 
   const duration = failed ? DEMO_LENGTH : len
-  const ending = v.endAt != null ? t >= v.endAt : duration > END_SECONDS * 2 && t > duration - END_SECONDS
   const cards = v.cards || []
   let idx = 0
   if (duration && cards.length) {
@@ -135,7 +79,7 @@ function VideoCard({ v, onDead }) {
 
   return (
     <article className="phone" ref={box}>
-      <div className={`screen ${ending ? 'ending' : ''}`}>
+      <div className="screen">
         {failed ? (
           <div className="poster"><StackIcon flavor={v.flavor} className="poster-icon" /></div>
         ) : (
@@ -154,11 +98,7 @@ function VideoCard({ v, onDead }) {
             onError={() => started && setFailed(true)}
           />
         )}
-        {ending && <div className="shade" />}
-
-        <AnimatePresence>{ending && <EndCard key="end" />}</AnimatePresence>
-
-        {!ending && card && (
+        {card && (
           <div className="screen-bottom">
             <AnimatePresence mode="wait">
               <motion.div
@@ -234,8 +174,8 @@ export default function VideoReel() {
         <p className="kicker">See it in action</p>
         <h2>{many ? 'Quick looks at our wafer and tea' : 'See it before you taste it'}</h2>
         <p className="sub">
-          {many ? 'Drag or swipe to browse. ' : 'Tap the speaker for sound. '}
-          Stay to the end for the pre-order info, the booth place and a QR code.
+          {many ? 'Drag or swipe to browse. ' : 'Tap play, and the speaker for sound. '}
+          Watch to the end for the pre-order info, the booth place and a QR code.
         </p>
         {many && (
           <div className="reel-bar">

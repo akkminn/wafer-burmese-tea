@@ -322,28 +322,6 @@ a {
   margin-top: 24px;
 }
 
-/* falling coconut flakes */
-.flakes {
-  position: absolute;
-  inset: 0;
-  z-index: 1;
-  pointer-events: none;
-}
-.flakes span {
-  position: absolute;
-  top: -20px;
-  background: #fff;
-  border-radius: 50% 40% 60% 40%;
-  box-shadow: 0 1px 3px rgba(11, 82, 48, 0.18);
-  opacity: 0.85;
-  animation: fall linear infinite;
-}
-@keyframes fall {
-  to {
-    transform: translate(var(--drift), 110vh) rotate(360deg);
-  }
-}
-
 .ribbon {
   position: relative;
   z-index: 2;
@@ -676,12 +654,6 @@ a {
   height: 100%;
   object-fit: cover;
 }
-.shade {
-  position: absolute;
-  inset: 0;
-  background: rgba(7, 40, 22, 0.35);
-  pointer-events: none;
-}
 .sound {
   position: absolute;
   top: 12px;
@@ -871,9 +843,6 @@ a {
     animation-iteration-count: 1 !important;
     scroll-behavior: auto !important;
     transition-duration: 0.01ms !important;
-  }
-  .flakes {
-    display: none;
   }
 }
 

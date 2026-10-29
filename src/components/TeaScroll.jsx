@@ -1,7 +1,6 @@
 import { lazy, Suspense, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useMotionValueEvent, useScroll } from 'framer-motion'
 import CupSpin from './CupSpin.jsx'
-import Flakes from './Flakes.jsx'
 import { CONFIG } from '../config.js'
 
 const Tea3D = lazy(() => import('./Tea3D.jsx'))
@@ -17,10 +16,10 @@ const SCENES = [
     text: 'About 3 inches tall, with a sip lid and our ဆရာကြီး sticker. Scroll to make it.',
   },
   { id: 'open', a: 0.1, b: 0.22, dot: 'Open', kicker: 'Step 1', title: 'Lift the lid', text: 'A small, empty cup, ready for tea.' },
-  { id: 'milk', a: 0.22, b: 0.38, dot: 'Milk', kicker: 'Step 2', my: 'နို့', title: 'Milk goes in first', text: 'Creamy milk is poured into the bottom of the cup.' },
-  { id: 'sugar', a: 0.38, b: 0.52, dot: 'Sugar', kicker: 'Step 3', my: 'သကြား', title: 'Add sugar', text: 'Sugar goes in and melts into the milk.' },
-  { id: 'tea', a: 0.52, b: 0.68, dot: 'Tea', kicker: 'Step 4', my: 'လက်ဖက်ရည်ပြင်း', title: 'Pour the strong tea', text: 'Hot, strong tea is poured in over the milk and sugar.' },
-  { id: 'froth', a: 0.68, b: 0.84, dot: 'Froth', kicker: 'Step 5', title: 'Pour from up high', text: 'Poured from high, the tea mixes, turns frothy and steams hot.' },
+  { id: 'tea', a: 0.22, b: 0.38, dot: 'Tea', kicker: 'Step 2', my: 'လက်ဖက်ရည်ပြင်း', title: 'Strong tea goes in first', text: 'Hot, strong tea is poured into the empty cup first.' },
+  { id: 'milk', a: 0.38, b: 0.52, dot: 'Milk', kicker: 'Step 3', my: 'နို့', title: 'Then the milk', text: 'Creamy milk is poured in over the tea.' },
+  { id: 'sugar', a: 0.52, b: 0.66, dot: 'Sugar', kicker: 'Step 4', my: 'သကြား', title: 'Add sugar', text: 'Sugar goes in and melts into the milky tea.' },
+  { id: 'froth', a: 0.66, b: 0.84, dot: 'Froth', kicker: 'Step 5', title: 'Pour from up high', text: 'Poured from high, the tea mixes, turns frothy and steams hot.' },
   { id: 'ready', a: 0.84, b: 1, dot: 'Ready', kicker: 'Ready', title: 'Lid on, logo to the front', text: `฿${CONFIG.prices.tea} · regular or less sweet · −฿${CONFIG.prices.comboSaving} with any wafer.` },
 ]
 
@@ -61,7 +60,6 @@ export default function TeaScroll({ onOrder }) {
   return (
     <section className="tea-scroll" id="tea" ref={ref}>
       <div className="stage tea-stage">
-        <Flakes count={0} />
         <div className="outline-text left" aria-hidden="true">BURMESE</div>
         <div className="outline-text right" aria-hidden="true">TEA</div>
 

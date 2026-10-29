@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+import { labelSides } from '../waferLabels.js'
 import {
   DRIPS,
   SHEET,
@@ -220,6 +221,7 @@ export default function Wafer3D({ layers, explode, boxO, yaw, label }) {
   const lineEls = useRef([])
   const dotEls = useRef([])
   const [visible, setVisible] = useState(true)
+  const sides = useMemo(() => labelSides(layers), [layers])
 
   useEffect(() => {
     const io = new IntersectionObserver(([en]) => setVisible(en.isIntersecting), { threshold: 0 })
@@ -230,8 +232,8 @@ export default function Wafer3D({ layers, explode, boxO, yaw, label }) {
   const onFrame = useCallback((pts, e) => {
     const o = String(clamp01((e - 0.72) / 0.28))
     pts.forEach((p, i) => {
-      if (!p) return
-      const left = i % 2 === 0
+      if (!p || !sides[i]) return
+      const left = sides[i] === 'left'
       const ax = left ? p.lx : p.rx
       const lab = labelEls.current[i]
       const line = lineEls.current[i]
@@ -253,7 +255,7 @@ export default function Wafer3D({ layers, explode, boxO, yaw, label }) {
         dot.style.opacity = o
       }
     })
-  }, [])
+  }, [sides])
 
   return (
     <div className="w3d" ref={wrap} role="img" aria-label={label}>
@@ -271,15 +273,15 @@ export default function Wafer3D({ layers, explode, boxO, yaw, label }) {
       </Canvas>
 
       <svg className="w3d-leaders" aria-hidden="true">
-        {layers.map((k, i) => (
+        {layers.map((k, i) => sides[i] && (
           <g key={i}>
             <line ref={(el) => (lineEls.current[i] = el)} stroke="#fff" strokeOpacity=".85" strokeWidth="1.6" />
             <circle ref={(el) => (dotEls.current[i] = el)} r="4.5" fill="#fff" />
           </g>
         ))}
       </svg>
-      {layers.map((k, i) => (
-        <div key={i} ref={(el) => (labelEls.current[i] = el)} className={`w3d-label ${i % 2 === 0 ? 'left' : 'right'}`} aria-hidden="true">
+      {layers.map((k, i) => sides[i] && (
+        <div key={i} ref={(el) => (labelEls.current[i] = el)} className={`w3d-label ${sides[i]}`} aria-hidden="true">
           <b>{LABEL[k].name}</b>
           <span lang="my">{LABEL[k].sub}</span>
         </div>

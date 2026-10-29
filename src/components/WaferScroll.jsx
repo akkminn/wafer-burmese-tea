@@ -2,7 +2,6 @@ import { lazy, Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion, useMotionValueEvent, useScroll, useTransform } from 'framer-motion'
 import WaferStack from './WaferStack.jsx'
 const Wafer3D = lazy(() => import('./Wafer3D.jsx'))
-import Flakes from './Flakes.jsx'
 import { CONFIG } from '../config.js'
 
 const RECIPES = {
@@ -101,7 +100,6 @@ export default function WaferScroll({ onOrder }) {
   return (
     <section className="wafer-scroll" id="wafer" ref={ref}>
       <div className="stage">
-        <Flakes />
         <div className="outline-text left" aria-hidden="true">WAFER</div>
         <div className="outline-text right" aria-hidden="true">
           <AnimatePresence mode="wait">

@@ -55,7 +55,6 @@ export const VIDEOS = [
     src: 'videos/tea-1.mp4',
     poster: 'videos/tea-1.jpg',
     flavor: 'classic',
-    endAt: 11.5,
     cards: [],
   },
 ]
