@@ -3,6 +3,7 @@ import { Canvas, useFrame, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
 import { labelSides } from '../waferLabels.js'
+import { useAdaptiveDpr } from './AdaptiveDpr.jsx'
 import {
   DRIPS,
   SHEET,
@@ -221,6 +222,7 @@ export default function Wafer3D({ layers, explode, boxO, yaw, label }) {
   const lineEls = useRef([])
   const dotEls = useRef([])
   const [visible, setVisible] = useState(true)
+  const { dpr, monitor } = useAdaptiveDpr()
   const sides = useMemo(() => labelSides(layers), [layers])
 
   useEffect(() => {
@@ -260,7 +262,7 @@ export default function Wafer3D({ layers, explode, boxO, yaw, label }) {
   return (
     <div className="w3d" ref={wrap} role="img" aria-label={label}>
       <Canvas
-        dpr={[1, 2]}
+        dpr={dpr}
         frameloop={visible ? 'always' : 'never'}
         camera={{ fov: 30, position: [0, 5, 11], near: 0.1, far: 80 }}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
@@ -269,6 +271,7 @@ export default function Wafer3D({ layers, explode, boxO, yaw, label }) {
           gl.toneMappingExposure = 1.05
         }}
       >
+        {monitor}
         <Scene layers={layers} explode={explode} boxO={boxO} yaw={yaw} onFrame={onFrame} />
       </Canvas>
 

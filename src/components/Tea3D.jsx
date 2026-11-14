@@ -2,6 +2,7 @@ import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { Canvas, useFrame, useLoader, useThree } from '@react-three/fiber'
 import * as THREE from 'three'
 import { RoomEnvironment } from 'three/examples/jsm/environments/RoomEnvironment.js'
+import { useAdaptiveDpr } from './AdaptiveDpr.jsx'
 import {
   FLOOR,
   H,
@@ -404,6 +405,7 @@ export default function Tea3D({ progress, label }) {
   const labelEls = useRef([])
   const groupEls = useRef([])
   const [visible, setVisible] = useState(true)
+  const { dpr, monitor } = useAdaptiveDpr()
 
   useEffect(() => {
     const io = new IntersectionObserver(([en]) => setVisible(en.isIntersecting), { threshold: 0 })
@@ -416,7 +418,11 @@ export default function Tea3D({ progress, label }) {
       const el = dim.current
       if (el) {
         el.style.transform = `translate(${d.dim.x + 14}px, ${d.dim.top}px)`
-        el.style.height = `${Math.max(0, d.dim.bottom - d.dim.top)}px`
+        const h = Math.round(Math.max(0, d.dim.bottom - d.dim.top))
+        if (el._h !== h) {
+          el.style.height = `${h}px`
+          el._h = h
+        }
         el.style.opacity = String(clamp01(d.dim.show))
       }
       LABELS.forEach((lb, i) => {
@@ -459,7 +465,7 @@ export default function Tea3D({ progress, label }) {
   return (
     <div className="t3d" ref={wrap} role="img" aria-label={label}>
       <Canvas
-        dpr={[1, 2]}
+        dpr={dpr}
         frameloop={visible ? 'always' : 'never'}
         camera={{ fov: 30, position: [0, 4, 10], near: 0.1, far: 80 }}
         gl={{ antialias: true, alpha: true, powerPreference: 'high-performance' }}
@@ -468,6 +474,7 @@ export default function Tea3D({ progress, label }) {
           gl.toneMappingExposure = 1.05
         }}
       >
+        {monitor}
         <Suspense fallback={null}>
           <Scene progress={progress} onFrame={onFrame} />
         </Suspense>
