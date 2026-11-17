@@ -1,3 +1,5 @@
+import { PRICES } from './catalog.js'
+
 export const CONFIG = {
   brand: 'Wafer Dessert & Burmese Tea',
   shopName: 'ဆရာကြီး',
@@ -20,11 +22,7 @@ export const CONFIG = {
     slotMinutes: 15,
   },
 
-  prices: {
-    wafer: { classic: 45, choco: 55, mixed: 50 },
-    tea: 35,
-    comboSaving: 5,
-  },
+  prices: PRICES,
 
   preorder: {
     discount: 5,
@@ -38,10 +36,10 @@ export const CONFIG = {
     method: 'PromptPay',
     bank: 'Bangkok Bank',
     accountName: 'MR AUNG KO KO MINN',
-    promptPayId: import.meta.env.VITE_PROMPTPAY_ID || '',
+    promptPayId: import.meta.env?.VITE_PROMPTPAY_ID || '',
   },
 
-  orderEndpoint: import.meta.env.VITE_ORDER_ENDPOINT || '',
+  orderEndpoint: import.meta.env?.VITE_ORDER_ENDPOINT || '',
   lineOAId: '@976loaax',
 
   social: {

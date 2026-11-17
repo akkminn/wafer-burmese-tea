@@ -1,0 +1,5 @@
+{
+  "rewrites": [
+    { "source": "/staff/walk-in", "destination": "/staff/walk-in/index.html" }
+  ]
+}
