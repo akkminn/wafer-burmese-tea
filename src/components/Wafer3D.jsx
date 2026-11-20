@@ -22,9 +22,9 @@ const EDGE = { wafer: 1.35, milk: 1.1, choco: 1.1, coconut: 1.0 } // rough half 
 
 const LABEL = {
   wafer: { name: 'Wafer sheet', sub: 'ဝေဖာ · crispy sheet' },
-  milk: { name: 'Milk drizzle', sub: 'ယို · runny condensed milk' },
-  choco: { name: 'Chocolate drizzle', sub: 'ယို · runny chocolate' },
-  coconut: { name: 'Coconut slices', sub: 'အုန်းသီးဖက် · young coconut' },
+  milk: { name: 'Milk filling', sub: 'နို့ဆီ + နို့စိမ်း · condensed + evaporated milk' },
+  choco: { name: 'Chocolate filling', sub: 'ချောကလက် · chocolate, cooked runny (ယို)' },
+  coconut: { name: 'Coconut flesh', sub: 'အုန်းသီး အသား · coconut flesh' },
 }
 
 const clamp01 = (v) => Math.min(1, Math.max(0, v))

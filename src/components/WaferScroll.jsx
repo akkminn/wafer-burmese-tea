@@ -9,21 +9,21 @@ const RECIPES = {
     name: 'Classic Coconut Milk',
     word: 'CLASSIC',
     layers: ['wafer', 'milk', 'coconut', 'wafer', 'milk', 'coconut', 'wafer'],
-    line: 'Runny milk (ယို) and coconut slices (အုန်းသီးဖက်) between the sheets. Nothing on top.',
+    line: 'Condensed milk (နို့ဆီ), evaporated milk (နို့စိမ်း) and coconut flesh (အုန်းသီး အသား), cooked until runny (ယို), between the sheets. Nothing on top.',
     note: 'One box holds two stacks like this one.',
   },
   choco: {
     name: 'Choco-Coco',
     word: 'CHOCO',
     layers: ['wafer', 'choco', 'coconut', 'wafer', 'choco', 'coconut', 'wafer'],
-    line: 'Runny chocolate (ယို) and coconut slices (အုန်းသီးဖက်) between the sheets. Nothing on top.',
+    line: 'Condensed milk (နို့ဆီ), evaporated milk (နို့စိမ်း), coconut flesh (အုန်းသီး အသား) and chocolate (ချောကလက်), cooked until runny (ယို), between the sheets. Nothing on top.',
     note: 'New: our own twist. In Myanmar it is only made with milk. Contains hazelnut.',
   },
   mixed: {
     name: 'Mixed-Layer',
     word: 'MIXED',
     layers: ['wafer', 'milk', 'coconut', 'wafer', 'choco', 'coconut', 'wafer'],
-    line: 'One runny milk layer and one runny chocolate layer, each with coconut slices.',
+    line: 'One coconut-milk filling and one chocolate filling, each with coconut flesh and cooked until runny (ယို).',
   },
 }
 

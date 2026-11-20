@@ -15,9 +15,9 @@ const KIND = {
 
 const LABEL = {
   wafer: { name: 'Wafer sheet', my: 'ဝေဖာ' },
-  milk: { name: 'Milk', my: 'ယို' },
-  choco: { name: 'Chocolate', my: 'ယို' },
-  coconut: { name: 'Coconut', my: 'အုန်းသီးဖက်' },
+  milk: { name: 'Milk filling', my: 'နို့ဆီ၊ နို့စိမ်း' },
+  choco: { name: 'Chocolate filling', my: 'ချောကလက်' },
+  coconut: { name: 'Coconut flesh', my: 'အုန်းသီး အသား' },
 }
 
 export const BASE_Y = 470 // top vertex of the bottom slab when collapsed

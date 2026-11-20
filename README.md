@@ -1,13 +1,13 @@
 # SIP & CRUNCH — Wafer Dessert & Burmese Tea pre-order website
 
-Team 2 · IRS 154 · Booth: **26 Nov 2026, 1:00–4:00 PM, Building 11, 1st floor, in front of the auditorium room**
+Team 2 · IRS 154 · Booth: **26 Nov 2026, 11:30 AM–4:00 PM, Building 11, 1st floor, in front of the auditorium room**
 
 Brand name: **SIP & CRUNCH** (tagline "Tea time, crunch time."). A one-page React site styled after the "animated burger landing page" idea:
 bold single-colour scenes, a spotlight, giant outlined words, and the product pulled apart with leader lines.
 
 1. **Wafer scroll scenes** (green, real 3D): intro, Classic, Choco-Coco, Mixed-Layer, packed in the kraft box.
-   Each box holds two stacks of 3 sheets, each with runny milk (ယို) or runny chocolate (ယို) and coconut slices (အုန်းသီးဖက်, young coconut)
-   between them, and nothing on top. The drizzle drips and stretches as the layers pull apart. Dots on the left jump between scenes.
+   Each box holds two stacks of 3 sheets, each filled with condensed milk (နို့ဆီ), evaporated milk (နို့စိမ်း) and coconut flesh (အုန်းသီး အသား), plus chocolate (ချောကလက်) in the
+   Choco-Coco, cooked until runny (ယို), between the sheets, and nothing on top. The drizzle drips and stretches as the layers pull apart. Dots on the left jump between scenes.
    Labels are in English and Burmese. If a device has no WebGL, a flat drawing is shown instead.
 2. **Tea cup** (gold, scroll-driven 3D): a small cup, about 3 in / 7.5 cm tall, modelled on the real cup photos (straight tapered paper cup, ribbed collar, SIP & CRUNCH sticker, flat brown sip lid with a raised centre and a sip slot). As you scroll the lid lifts off, milk falls in, sugar (drawn as cubes) drops in, then strong tea is poured from high and turns frothy, with steam rising. Labels with leader lines name each thing added (English + Burmese). The cup only turns a little, and the lid goes back on at the end. No jug is drawn; the liquids fall in from above. Code: `TeaScroll.jsx` (captions) + `Tea3D.jsx` (scene, timeline, labels) + `tea3d/parts.js` (shapes, stream and texture helpers); `CupSpin.jsx` (drag-to-spin) is the fallback when WebGL is off. Reference photos: `plastic_cup.png`, `cup_lid.webp` in the project folder.
 3. **Videos:** phone-shaped players. Only the small poster loads with the page; the video downloads when the visitor presses play, and a tap pauses or resumes it. At the end of each video, while the picture is blurred, an info card fades in: logo, offer, prices, booth place and time, a QR code and the donation line.
