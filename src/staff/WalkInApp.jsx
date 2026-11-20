@@ -165,7 +165,7 @@ export default function WalkInApp() {
   }
 
   return <main className="staff-shell">
-    <header className="staff-header"><div><small>ဆရာကြီး · Staff</small><h1>Walk-in sales</h1></div>{token && <button type="button" onClick={() => { setToken(''); setHistory([]); setSummary(null) }}>Sign out</button>}</header>
+    <header className="staff-header"><div><small>SIP &amp; CRUNCH · Staff</small><h1>Walk-in sales</h1></div>{token && <button type="button" onClick={() => { setToken(''); setHistory([]); setSummary(null) }}>Sign out</button>}</header>
     {!token ? <Login onToken={onToken} /> : <>
       {message && <p role="status" className="staff-success">{message}</p>}
       {error && <p role="alert" className="staff-error">{error}</p>}

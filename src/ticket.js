@@ -41,7 +41,7 @@ export async function makeTicket(order) {
     document.fonts.load('400 34px Outfit'),
     document.fonts.load('500 60px "Noto Sans Myanmar"'),
   ]).catch(() => {})
-  const logo = await loadImage('img/logo-sticker.webp')
+  const logo = await loadImage('img/logo-icon.webp')
   const e = CONFIG.event
 
   // measure first so the card is exactly as tall as it needs to be
@@ -63,22 +63,13 @@ export async function makeTicket(order) {
 
   g.fillStyle = GREEN
   g.fillRect(0, 0, W, 250)
-  if (logo) {
-    g.save()
-    g.beginPath()
-    g.arc(PAD + 80, 125, 80, 0, Math.PI * 2)
-    g.clip()
-    g.fillStyle = '#fff'
-    g.fillRect(PAD, 45, 160, 160)
-    g.drawImage(logo, PAD, 45, 160, 160)
-    g.restore()
-  }
+  if (logo) g.drawImage(logo, PAD - 10, 40, 170, 170)
   g.fillStyle = GOLD_SOFT
-  g.font = '500 66px "Noto Sans Myanmar", sans-serif'
-  g.fillText(CONFIG.shopName, PAD + 200, 128)
+  g.font = '800 72px Outfit, sans-serif'
+  g.fillText(CONFIG.brand, PAD + 200, 128)
   g.fillStyle = '#fff'
-  g.font = '800 38px Outfit, sans-serif'
-  g.fillText(CONFIG.brand, PAD + 200, 190)
+  g.font = '700 32px Outfit, sans-serif'
+  g.fillText(CONFIG.descriptor, PAD + 200, 190)
 
   let y = 340
   g.fillStyle = GREEN

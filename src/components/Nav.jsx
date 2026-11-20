@@ -3,11 +3,11 @@ import { CONFIG } from '../config.js'
 export default function Nav() {
   return (
     <header className="nav">
-      <a className="nav-brand" href="#wafer" aria-label={`${CONFIG.shopName} — ${CONFIG.brand}`}>
-        <img className="nav-logo" src="img/logo-sticker.webp" alt="" />
+      <a className="nav-brand" href="#wafer" aria-label={`${CONFIG.brand} — ${CONFIG.descriptor}`}>
+        <img className="nav-logo" src="img/logo-icon.webp" alt="" />
         <span className="nav-name">
-          <b lang="my">{CONFIG.shopName}</b>
-          <small>Wafer Dessert &amp; Burmese Tea</small>
+          <b>{CONFIG.brand}</b>
+          <small>{CONFIG.descriptor}</small>
         </span>
       </a>
       <nav className="nav-links" aria-label="Sections">

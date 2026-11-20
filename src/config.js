@@ -1,8 +1,9 @@
 import { PRICES } from './catalog.js'
 
 export const CONFIG = {
-  brand: 'Wafer Dessert & Burmese Tea',
-  shopName: 'ဆရာကြီး',
+  brand: 'SIP & CRUNCH',
+  descriptor: 'Wafer Dessert & Burmese Tea',
+  logoLine: 'Tea time, crunch time.',
   siteUrl: 'https://wafer-burmese-tea.vercel.app',
   tagline: 'A Taste of Burmese Childhood, Shared with Everyone.',
   burmeseLine: 'ဝေဖာယိုသုပ် + မြန်မာလက်ဖက်ရည်',

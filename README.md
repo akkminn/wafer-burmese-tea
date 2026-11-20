@@ -1,15 +1,15 @@
-# Wafer Dessert & Burmese Tea — pre-order website
+# SIP & CRUNCH — Wafer Dessert & Burmese Tea pre-order website
 
 Team 2 · IRS 154 · Booth: **26 Nov 2026, 1:00–4:00 PM, Building 11, 1st floor, in front of the auditorium room**
 
-Shop name: **ဆရာကြီး**. A one-page React site styled after the "animated burger landing page" idea:
+Brand name: **SIP & CRUNCH** (tagline "Tea time, crunch time."). A one-page React site styled after the "animated burger landing page" idea:
 bold single-colour scenes, a spotlight, giant outlined words, and the product pulled apart with leader lines.
 
 1. **Wafer scroll scenes** (green, real 3D): intro, Classic, Choco-Coco, Mixed-Layer, packed in the kraft box.
    Each box holds two stacks of 3 sheets, each with runny milk (ယို) or runny chocolate (ယို) and coconut slices (အုန်းသီးဖက်, young coconut)
    between them, and nothing on top. The drizzle drips and stretches as the layers pull apart. Dots on the left jump between scenes.
    Labels are in English and Burmese. If a device has no WebGL, a flat drawing is shown instead.
-2. **Tea cup** (gold, scroll-driven 3D): a small cup, about 3 in / 7.5 cm tall, modelled on the real cup photos (straight tapered paper cup, ribbed collar, ဆရာကြီး sticker, flat brown sip lid with a raised centre and a sip slot). As you scroll the lid lifts off, milk falls in, sugar (drawn as cubes) drops in, then strong tea is poured from high and turns frothy, with steam rising. Labels with leader lines name each thing added (English + Burmese). The cup only turns a little, and the lid goes back on at the end. No jug is drawn; the liquids fall in from above. Code: `TeaScroll.jsx` (captions) + `Tea3D.jsx` (scene, timeline, labels) + `tea3d/parts.js` (shapes, stream and texture helpers); `CupSpin.jsx` (drag-to-spin) is the fallback when WebGL is off. Reference photos: `plastic_cup.png`, `cup_lid.webp` in the project folder.
+2. **Tea cup** (gold, scroll-driven 3D): a small cup, about 3 in / 7.5 cm tall, modelled on the real cup photos (straight tapered paper cup, ribbed collar, SIP & CRUNCH sticker, flat brown sip lid with a raised centre and a sip slot). As you scroll the lid lifts off, milk falls in, sugar (drawn as cubes) drops in, then strong tea is poured from high and turns frothy, with steam rising. Labels with leader lines name each thing added (English + Burmese). The cup only turns a little, and the lid goes back on at the end. No jug is drawn; the liquids fall in from above. Code: `TeaScroll.jsx` (captions) + `Tea3D.jsx` (scene, timeline, labels) + `tea3d/parts.js` (shapes, stream and texture helpers); `CupSpin.jsx` (drag-to-spin) is the fallback when WebGL is off. Reference photos: `plastic_cup.png`, `cup_lid.webp` in the project folder.
 3. **Videos:** phone-shaped players. Only the small poster loads with the page; the video downloads when the visitor presses play, and a tap pauses or resumes it. At the end of each video, while the picture is blurred, an info card fades in: logo, offer, prices, booth place and time, a QR code and the donation line.
 4. **Pre-order:** pick quantities, choose a pickup slot, get an order code. 5 baht off every wafer and tea.
 5. **Booth:** date, place, how it works, allergy notice, and the **QR code (download as PNG)**.
@@ -64,7 +64,7 @@ Until `orderEndpoint` is set, customers are asked to send the slip on LINE inste
 
 ## Photos and logo
 
-- `public/img/logo-large.webp` and `logo-sticker.webp` come from `logo.png`.
+- `public/img/logo-icon.webp` is the cup-and-wafer mark (nav, favicon, ticket). `logo-large.webp` and `logo-sticker.webp` are the full SIP & CRUNCH logo with its tagline (footer, cup sticker). All three are transparent cut-outs of the supplied logo images.
 - Wafer photos come from your final deck. To use your own photos instead, replace the files in `public/img/` with the same names.
 
 ## Add your videos
