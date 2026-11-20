@@ -28,7 +28,7 @@ export default function App() {
         <Booth />
       </main>
       <Footer />
-      <p className="sr-only">{CONFIG.brand}</p>
+      <p className="sr-only">{CONFIG.brand} — {CONFIG.descriptor}</p>
     </>
   )
 }

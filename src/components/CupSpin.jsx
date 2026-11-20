@@ -135,7 +135,7 @@ export default function CupSpin() {
         <p className="script">our little cup</p>
         <h2>Spin the cup. Find our logo.</h2>
         <p className="cup-sub">
-          Burmese tea in a small paper cup, about 3 inches tall, with our <span lang="my">ဆရာကြီး</span> sticker on the
+          Burmese tea in a small paper cup, about 3 inches tall, with our SIP &amp; CRUNCH sticker on the
           front. Drag it sideways to turn it round.
         </p>
 
@@ -183,7 +183,7 @@ export default function CupSpin() {
               <line x1="170" y1="204" x2={OX + 78} y2="204" stroke="#fff" strokeOpacity=".9" strokeWidth="1.6" />
               <circle cx={OX + 78} cy="204" r="4.5" fill="#fff" />
               <text x="156" y="200" textAnchor="end" className="lab-name">Our sticker</text>
-              <text x="156" y="224" textAnchor="end" className="lab-my">ဆရာကြီး</text>
+              <text x="156" y="224" textAnchor="end" className="lab-my">SIP &amp; CRUNCH</text>
 
               <g stroke="#fff" strokeWidth="2" strokeLinecap="round">
                 <line x1="556" y1="24" x2="556" y2="292" />

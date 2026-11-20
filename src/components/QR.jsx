@@ -32,6 +32,6 @@ export async function downloadQR() {
   const dataUrl = await QRCode.toDataURL(siteUrl(), { width: 1200, margin: 2, color: { dark: '#0b5230', light: '#ffffff' } })
   const a = document.createElement('a')
   a.href = dataUrl
-  a.download = 'wafer-tea-preorder-qr.png'
+  a.download = 'sip-and-crunch-preorder-qr.png'
   a.click()
 }

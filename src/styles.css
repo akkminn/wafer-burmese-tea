@@ -853,12 +853,7 @@ a {
 }
 
 .footer-logo {
-  width: 84px;
+  width: 170px;
+  max-width: 60vw;
   margin: 0 auto 8px;
-}
-.footer strong[lang='my'] {
-  display: block;
-  font-family: 'Noto Sans Myanmar', var(--font);
-  font-size: 1.8rem;
-  color: var(--gold-soft);
 }

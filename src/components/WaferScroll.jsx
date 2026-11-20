@@ -136,8 +136,9 @@ export default function WaferScroll({ onOrder }) {
             {id === 'intro' && (
               <motion.div key="intro" initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -10 }}>
                 <h1>
-                  Wafer Dessert <span>&amp;</span> Burmese Tea
+                  SIP <span>&amp;</span> CRUNCH
                 </h1>
+                <p className="descriptor">{CONFIG.descriptor}</p>
                 <p className="chips">
                   <b>{countdown}</b>
                   <span>{CONFIG.event.dayMonth} · {CONFIG.event.timeLabel}</span>

@@ -8,8 +8,8 @@
   gap: 10px;
 }
 .nav-logo {
-  width: 40px;
-  height: 40px;
+  width: 46px;
+  height: 46px;
   border-radius: 0;
   background: none;
   object-fit: contain;
@@ -19,9 +19,20 @@
   line-height: 1.1;
 }
 .nav-name b {
-  font-family: 'Noto Sans Myanmar', var(--font);
+  font-family: var(--font);
   font-size: 1.15rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
   color: var(--gold-soft);
+}
+.stage-copy .descriptor {
+  margin: 6px auto 0;
+  font-size: 0.82rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--gold-soft);
+  opacity: 1;
 }
 .nav-name small {
   font-size: 0.7rem;

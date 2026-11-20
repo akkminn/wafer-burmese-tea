@@ -13,7 +13,7 @@ const SCENES = [
     dot: 'Cup',
     kicker: 'Our little cup',
     title: 'Burmese tea in a small paper cup',
-    text: 'About 3 inches tall, with a sip lid and our ဆရာကြီး sticker. Scroll to make it.',
+    text: 'About 3 inches tall, with a sip lid and our SIP & CRUNCH sticker. Scroll to make it.',
   },
   { id: 'open', a: 0.1, b: 0.22, dot: 'Open', kicker: 'Step 1', title: 'Lift the lid', text: 'A small, empty cup, ready for tea.' },
   { id: 'tea', a: 0.22, b: 0.38, dot: 'Tea', kicker: 'Step 2', my: 'လက်ဖက်ရည်ပြင်း', title: 'Strong tea goes in first', text: 'Hot, strong tea is poured into the empty cup first.' },
