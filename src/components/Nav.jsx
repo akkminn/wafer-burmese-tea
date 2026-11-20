@@ -14,6 +14,7 @@ export default function Nav() {
         <a href="#wafer">Wafer</a>
         <a href="#tea">Tea</a>
         <a href="#videos">Videos</a>
+        <a href="#menu">Menu</a>
         <a href="#order">Order</a>
         <a href="#booth">Booth</a>
       </nav>

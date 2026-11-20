@@ -4,6 +4,7 @@ import Nav from './components/Nav.jsx'
 import WaferScroll from './components/WaferScroll.jsx'
 import TeaScroll from './components/TeaScroll.jsx'
 import VideoReel from './components/VideoReel.jsx'
+import Menu from './components/Menu.jsx'
 import Order from './components/Order.jsx'
 import Booth from './components/Booth.jsx'
 import Footer from './components/Footer.jsx'
@@ -24,6 +25,7 @@ export default function App() {
         <WaferScroll onOrder={orderFlavor} />
         <TeaScroll onOrder={orderFlavor} />
         <VideoReel />
+        <Menu />
         <Order pick={pick} />
         <Booth />
       </main>

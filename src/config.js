@@ -5,6 +5,7 @@ export const CONFIG = {
   descriptor: 'Wafer Dessert & Burmese Tea',
   logoLine: 'Tea time, crunch time.',
   siteUrl: 'https://wafer-burmese-tea.vercel.app',
+  surveyUrl: 'https://docs.google.com/forms/d/e/1FAIpQLSd1bdpVo2F0mPdjD70xFCovx_Qmks2rFtmvsfNIxX9KZsPQwg/viewform',
   tagline: 'A Taste of Burmese Childhood, Shared with Everyone.',
   burmeseLine: 'ဝေဖာယိုသုပ် + မြန်မာလက်ဖက်ရည်',
 

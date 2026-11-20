@@ -7,9 +7,9 @@ export function siteUrl() {
   return typeof window === 'undefined' ? '' : window.location.href.split('#')[0]
 }
 
-export default function QR({ size = 160, className = '' }) {
+export default function QR({ size = 160, className = '', value }) {
   const [svg, setSvg] = useState('')
-  const url = siteUrl()
+  const url = value || siteUrl()
   useEffect(() => {
     let live = true
     QRCode.toString(url, { type: 'svg', margin: 1, color: { dark: '#0b5230', light: '#ffffff' } }).then((s) => live && setSvg(s))

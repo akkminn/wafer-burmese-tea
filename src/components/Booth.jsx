@@ -79,6 +79,16 @@ export default function Booth() {
               <button type="button" className="btn btn-navy btn-sm" onClick={downloadQR}>Download QR (PNG)</button>
             </div>
           </div>
+          {CONFIG.surveyUrl && (
+            <div className="qr-card">
+              <QR size={132} value={CONFIG.surveyUrl} />
+              <div>
+                <strong>Tried us? Tell us what you think</strong>
+                <span>A 1 minute survey. It is anonymous and helps our class project.</span>
+                <a className="btn btn-gold btn-sm" href={CONFIG.surveyUrl} target="_blank" rel="noreferrer">Open the survey</a>
+              </div>
+            </div>
+          )}
           <a className="btn btn-navy" href="#order">Start my pre-order</a>
         </div>
       </div>
