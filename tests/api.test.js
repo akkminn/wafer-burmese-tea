@@ -3,6 +3,8 @@ import assert from 'node:assert/strict'
 import { createHmac, randomUUID } from 'node:crypto'
 import loginStaff from '../api/staff/login.js'
 import createSale from '../api/staff/create.js'
+import listPreorders from '../api/staff/preorders.js'
+import confirmPickup from '../api/staff/pickup.js'
 
 function response() {
   return {
@@ -57,7 +59,7 @@ test('login and create APIs authenticate with email/password, reprice, and never
     const req = {
       method: 'POST',
       headers: { authorization: `Bearer ${token}` },
-      body: { request_id: randomUUID(), cart: { classic: 1, teaRegular: 1 }, payment_method: 'Cash', payment_confirmed: true, total: 1 },
+      body: { request_id: randomUUID(), cart: { classic: 1, tea: 1 }, payment_method: 'Cash', payment_confirmed: true, total: 1 },
     }
     const first = response()
     await createSale(req, first)
@@ -80,6 +82,21 @@ test('login and create APIs authenticate with email/password, reprice, and never
     const denied = response()
     await createSale({ ...req, headers: {} }, denied)
     assert.equal(denied.code, 401)
+
+    fail = false
+    const preRes = response()
+    await listPreorders({ method: 'GET', headers: { authorization: `Bearer ${token}` } }, preRes)
+    assert.equal(preRes.code, 200)
+
+    const badCode = response()
+    await confirmPickup({ method: 'POST', headers: { authorization: `Bearer ${token}` }, body: { code: 'INVALID' } }, badCode)
+    assert.equal(badCode.code, 400)
+
+    const okPickup = response()
+    await confirmPickup({ method: 'POST', headers: { authorization: `Bearer ${token}` }, body: { code: 'wb-ab12' } }, okPickup)
+    assert.equal(okPickup.code, 200)
+    assert.equal(stored.code, 'WB-AB12')
+    assert.equal(stored.staff_id, 'staff@example.com')
   } finally {
     global.fetch = originalFetch
     for (const [key, value] of Object.entries(original)) {

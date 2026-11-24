@@ -30,7 +30,7 @@ export function calculateSale(input) {
   }))
   const raw = items.reduce((sum, item) => sum + item.line_total, 0)
   const wafers = cart.classic + cart.choco + cart.mixed
-  const teas = cart.teaRegular + cart.teaLess
+  const teas = cart.tea
   const combo_discount = Math.min(wafers, teas) * PRICES.comboSaving
   return { cart, items, subtotal: raw, combo_discount, total: raw - combo_discount }
 }

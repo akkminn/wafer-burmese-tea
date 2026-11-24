@@ -27,6 +27,34 @@ test('staff email/password login, PromptPay QR generation, and uncertain sale re
   process.env.VITE_PROMPTPAY_ID = '0845077107'
 
   let createAttempts = 0
+  let preorderList = [
+    {
+      code: 'WB-1111',
+      name: 'Aye Aye',
+      contact: '0811111111',
+      pickup_time: '12:00 PM',
+      items: ['1 × Classic Coconut Milk wafer'],
+      total: 40,
+      note: 'No hazelnut',
+      payment: 'Slip received',
+      confirmed: true,
+      picked_up: false,
+      picked_up_info: '',
+    },
+    {
+      code: 'WB-2222',
+      name: 'Ko Min',
+      contact: '0822222222',
+      pickup_time: '12:30 PM',
+      items: ['1 × Burmese Tea'],
+      total: 30,
+      note: '',
+      payment: 'Waiting for slip',
+      confirmed: false,
+      picked_up: false,
+      picked_up_info: '',
+    },
+  ]
   const requests = []
   globalThis.fetch = async (url, options = {}) => {
     const path = String(url).split('/').at(-1)
@@ -39,6 +67,13 @@ test('staff email/password login, PromptPay QR generation, and uncertain sale re
     }
     if (path === 'sales') return { ok: true, json: async () => ({ ok: true, data: { sales: [], can_void: true } }) }
     if (path === 'summary') return { ok: true, json: async () => ({ ok: true, data: { date: '2026-11-26', revenue: 0, transactions: 0, cash: 0, promptpay: 0, product_quantities: {} } }) }
+    if (path === 'preorders') return { ok: true, json: async () => ({ ok: true, data: { preorders: preorderList } }) }
+    if (path === 'pickup') {
+      const target = preorderList.find((o) => o.code === body.code)
+      const updated = { ...target, picked_up: true, picked_up_info: 'Yes · 12:05 · admin@example.com' }
+      preorderList = preorderList.map((o) => (o.code === body.code ? updated : o))
+      return { ok: true, json: async () => ({ ok: true, data: updated }) }
+    }
     if (path === 'status') return { ok: true, json: async () => ({ ok: true, data: { state: 'NOT_FOUND' } }) }
     if (path === 'create') {
       createAttempts++
@@ -111,6 +146,26 @@ test('staff email/password login, PromptPay QR generation, and uncertain sale re
     assert.deepEqual(creates[1].body.cart, first.cart)
     assert.equal(creates[1].body.payment_method, 'PromptPay')
     assert.equal(localStorage.getItem('walk-in-pending-request'), null)
+
+    // Pre-order search by name & ID, and confirm pick up only for admin-confirmed paid orders
+    await act(async () => button('Pickups').click())
+    assert.match(document.body.textContent, /Aye Aye/)
+    assert.match(document.body.textContent, /Ko Min/)
+    // Unpaid order (WB-2222) has no Confirm pick up button
+    assert.equal(button('Confirm pick up · WB-2222'), undefined)
+
+    // Filter by name
+    const searchInput = document.querySelector('input[type="search"]')
+    await act(async () => setInputValue(searchInput, 'aye'))
+    assert.match(document.body.textContent, /WB-1111/)
+    assert.doesNotMatch(document.body.textContent, /WB-2222/)
+
+    // Filter by order ID and confirm pickup
+    await act(async () => setInputValue(searchInput, '1111'))
+    await act(async () => button('Confirm pick up · WB-1111').click())
+    await act(async () => button('Yes, confirm pick up').click())
+    assert.equal(requests.find((r) => r.path === 'pickup').body.code, 'WB-1111')
+    assert.match(document.body.textContent, /Picked up \(Yes · 12:05 · admin@example\.com\)/)
   } finally {
     if (root) {
       const { act } = await import('react')

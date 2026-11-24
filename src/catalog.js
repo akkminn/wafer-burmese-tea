@@ -9,6 +9,5 @@ export const WALK_IN_PRODUCTS = Object.freeze({
   classic: { name: 'Classic Wafer', price: PRICES.wafer.classic },
   choco: { name: 'Choco-Coco Wafer', price: PRICES.wafer.choco },
   mixed: { name: 'Mixed-Layer Wafer', price: PRICES.wafer.mixed },
-  teaRegular: { name: 'Burmese Tea (Regular)', price: PRICES.tea },
-  teaLess: { name: 'Burmese Tea (Less Sweet)', price: PRICES.tea },
+  tea: { name: 'Burmese Tea', price: PRICES.tea },
 })

@@ -5,7 +5,7 @@ import { priceCart } from '../src/pricing.js'
 import { authenticate, createSessionToken, parseAccounts, verifyCredentials, verifySessionToken } from '../server/auth.js'
 
 test('walk-in pricing matches the public calculator without pre-order discounts', () => {
-  const cart = { classic: 2, choco: 1, mixed: 0, teaRegular: 2, teaLess: 1 }
+  const cart = { classic: 2, choco: 1, mixed: 0, tea: 3 }
   const sale = calculateSale(cart)
   const walkin = priceCart(cart, { isPreorder: false })
   const preorder = priceCart(cart, { isPreorder: true })

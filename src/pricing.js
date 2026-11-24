@@ -15,7 +15,7 @@ const n = (v) => Number(v) || 0
 
 export function priceCart(cart, { isPreorder = true } = {}) {
   const waferCount = n(cart.classic) + n(cart.choco) + n(cart.mixed)
-  const teaCount = n(cart.teaRegular) + n(cart.teaLess)
+  const teaCount = n(cart.tea) + n(cart.teaRegular) + n(cart.teaLess)
   const pairs = Math.min(waferCount, teaCount)
 
   const waferTotal = n(cart.classic) * prices.wafer.classic + n(cart.choco) * prices.wafer.choco + n(cart.mixed) * prices.wafer.mixed
@@ -51,6 +51,7 @@ export function cartLines(cart) {
   for (const f of FLAVORS) if (cart[f.id] > 0) lines.push({ key: f.id, qty: cart[f.id], label: `${f.name} wafer` })
   if (cart.teaRegular > 0) lines.push({ key: 'teaRegular', qty: cart.teaRegular, label: 'Burmese Tea (regular)' })
   if (cart.teaLess > 0) lines.push({ key: 'teaLess', qty: cart.teaLess, label: 'Burmese Tea (less sweet)' })
+  if (cart.tea > 0) lines.push({ key: 'tea', qty: cart.tea, label: 'Burmese Tea' })
   return lines
 }
 

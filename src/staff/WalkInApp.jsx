@@ -3,11 +3,20 @@ import QRCode from 'qrcode'
 import { WALK_IN_PRODUCTS } from '../catalog.js'
 import { CONFIG } from '../config.js'
 import { COMBOS } from '../data.js'
-import { EMPTY_CART, priceCart } from '../pricing.js'
+import { priceCart } from '../pricing.js'
 import { promptPayPayload } from '../promptpay.js'
 import { staffApi, staffLogin } from './api.js'
 
 const PRODUCT_IDS = Object.keys(WALK_IN_PRODUCTS)
+const WALK_IN_EMPTY_CART = Object.freeze({ classic: 0, choco: 0, mixed: 0, tea: 0 })
+const WALK_IN_COMBOS = COMBOS.map((combo) => {
+  const add = {}
+  for (const [id, qty] of Object.entries(combo.add)) {
+    const key = id === 'teaRegular' || id === 'teaLess' ? 'tea' : id
+    add[key] = (add[key] || 0) + qty
+  }
+  return { ...combo, add }
+})
 const money = (n) => `฿${Number(n || 0).toLocaleString('en-US')}`
 const PENDING_KEY = 'walk-in-pending-request'
 const SESSION_KEY = 'walk-in-staff-session'
@@ -73,7 +82,7 @@ function Login({ onSession, initialError }) {
       <div className="staff-login-head">
         <span className="staff-badge">Staff POS</span>
         <h2 className="staff-login-title">Sign in</h2>
-        <p className="staff-muted">Use your staff account email and password to record walk-in sales.</p>
+        <p className="staff-muted">Use your staff account email and password to record walk-in sales and confirm pre-order pickups.</p>
       </div>
       {error && <p role="alert" className="staff-error">{error}</p>}
       <form className="staff-login-form" onSubmit={submit} noValidate>
@@ -275,10 +284,79 @@ function SaleDetails({ sale, canVoid, onVoid, busy }) {
   )
 }
 
+function PreorderCard({ order, busy, onConfirmPickup }) {
+  const [arming, setArming] = useState(false)
+  const statusClass = order.picked_up ? 'is-picked' : order.confirmed ? 'is-ready' : 'is-unpaid'
+  const statusLabel = order.picked_up ? 'Picked up' : order.confirmed ? 'Paid · Ready' : 'Not confirmed'
+
+  const confirmNow = async () => {
+    setArming(false)
+    await onConfirmPickup(order.code)
+  }
+
+  return (
+    <article className={`staff-preorder ${statusClass}`}>
+      <div className="staff-preorder-head">
+        <div>
+          <strong className="staff-preorder-code">{order.code}</strong>
+          <b className="staff-preorder-name">{order.name || 'Unnamed customer'}</b>
+          <small className="staff-muted">
+            {order.pickup_time ? `${order.pickup_time}` : 'No slot'}
+            {order.contact ? ` · ${order.contact}` : ''}
+          </small>
+        </div>
+        <div className="staff-preorder-right">
+          <span className={`staff-pill ${statusClass}`}>{statusLabel}</span>
+          <strong>{money(order.total)}</strong>
+        </div>
+      </div>
+
+      {order.items?.length > 0 && (
+        <ul className="staff-preorder-items">
+          {order.items.map((line, i) => <li key={i}>{line}</li>)}
+        </ul>
+      )}
+
+      {order.note && (
+        <p className="staff-preorder-note">
+          <b>Note:</b> {order.note}
+        </p>
+      )}
+
+      {order.picked_up ? (
+        <p className="staff-preorder-done">✓ Picked up ({order.picked_up_info})</p>
+      ) : !order.confirmed ? (
+        <p className="staff-preorder-wait">
+          {order.payment || 'Waiting for payment'} — admin must mark <b>Confirmed? = Yes</b> in the sheet before pickup.
+        </p>
+      ) : arming ? (
+        <div className="staff-preorder-confirm">
+          <p>Hand over items to <b>{order.name || order.code}</b>?</p>
+          <div className="staff-review-actions">
+            <button type="button" disabled={busy} onClick={() => setArming(false)}>Cancel</button>
+            <button type="button" className="staff-primary" disabled={busy} onClick={confirmNow}>
+              {busy ? 'Saving…' : 'Yes, confirm pick up'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <button
+          type="button"
+          className="staff-primary staff-pickup-btn"
+          disabled={busy}
+          onClick={() => setArming(true)}
+        >
+          Confirm pick up · {order.code}
+        </button>
+      )}
+    </article>
+  )
+}
+
 export default function WalkInApp() {
   const [session, setSession] = useState(readSession)
-  const [tab, setTab] = useState('sale') // 'sale' | 'summary' | 'history'
-  const [cart, setCart] = useState(() => readPending()?.cart || { ...EMPTY_CART })
+  const [tab, setTab] = useState('sale') // 'sale' | 'preorders' | 'summary' | 'history'
+  const [cart, setCart] = useState(() => readPending()?.cart || { ...WALK_IN_EMPTY_CART })
   const [payment, setPayment] = useState(() => readPending()?.payment_method || 'Cash')
   const [confirmed, setConfirmed] = useState(false)
   const [review, setReview] = useState(false)
@@ -291,6 +369,11 @@ export default function WalkInApp() {
   const [error, setError] = useState('')
   const [history, setHistory] = useState([])
   const [summary, setSummary] = useState(null)
+  const [preorders, setPreorders] = useState([])
+  const [preordersLoaded, setPreordersLoaded] = useState(false)
+  const [preorderError, setPreorderError] = useState('')
+  const [search, setSearch] = useState('')
+  const [preorderFilter, setPreorderFilter] = useState('all') // 'all' | 'ready' | 'unpaid' | 'picked'
   const [canVoid, setCanVoid] = useState(() => Boolean(readSession()?.canVoid))
   const pricing = priceCart(cart, { isPreorder: false })
 
@@ -314,6 +397,9 @@ export default function WalkInApp() {
     setSession(null)
     setHistory([])
     setSummary(null)
+    setPreorders([])
+    setPreordersLoaded(false)
+    setPreorderError('')
     setCanVoid(false)
     setQrModalOpen(false)
     if (reason) setError(reason)
@@ -326,6 +412,22 @@ export default function WalkInApp() {
     setMessage('')
   }, [])
 
+  const refreshPreorders = useCallback(async (credential = token) => {
+    if (!credential) return
+    try {
+      const data = await staffApi('preorders', credential)
+      setPreorders(Array.isArray(data?.preorders) ? data.preorders : [])
+      setPreordersLoaded(true)
+      setPreorderError('')
+    } catch (err) {
+      if (err.status === 401 || err.status === 403) {
+        clearSession(err.message)
+      } else {
+        setPreorderError(err.message || 'Could not load pre-orders.')
+      }
+    }
+  }, [token, clearSession])
+
   const refresh = useCallback(async (credential = token) => {
     if (!credential) return
     try {
@@ -336,13 +438,56 @@ export default function WalkInApp() {
     } catch (err) {
       if (err.status === 401 || err.status === 403) {
         clearSession(err.message)
-      } else {
-        setError(err.message)
+        return
       }
+      setError(err.message)
     }
-  }, [token, clearSession])
+    refreshPreorders(credential)
+  }, [token, clearSession, refreshPreorders])
 
   useEffect(() => { if (token) refresh(token) }, [token, refresh])
+
+  const readyPreorderCount = useMemo(
+    () => preorders.filter((o) => o.confirmed && !o.picked_up).length,
+    [preorders],
+  )
+
+  const filteredPreorders = useMemo(() => {
+    const q = search.trim().toLowerCase()
+    return preorders.filter((o) => {
+      if (preorderFilter === 'ready' && !(o.confirmed && !o.picked_up)) return false
+      if (preorderFilter === 'unpaid' && (o.confirmed || o.picked_up)) return false
+      if (preorderFilter === 'picked' && !o.picked_up) return false
+      if (!q) return true
+      return (
+        String(o.code || '').toLowerCase().includes(q) ||
+        String(o.name || '').toLowerCase().includes(q) ||
+        String(o.contact || '').toLowerCase().includes(q)
+      )
+    })
+  }, [preorders, search, preorderFilter])
+
+  const confirmPickup = async (code) => {
+    if (busyRef.current) return
+    busyRef.current = true
+    setBusy(true)
+    setError('')
+    setPreorderError('')
+    try {
+      const updated = await staffApi('pickup', token, { code })
+      setPreorders((list) => list.map((item) => (item.code === updated.code ? updated : item)))
+      setMessage(`Confirmed pick up for ${updated.code}${updated.name ? ` (${updated.name})` : ''}.`)
+    } catch (err) {
+      if (err.status === 401 || err.status === 403) {
+        clearSession(err.message)
+      } else {
+        setPreorderError(err.message || 'Could not confirm pick up.')
+      }
+    } finally {
+      busyRef.current = false
+      setBusy(false)
+    }
+  }
 
   const change = (id, amount) => {
     if (pending || busy) return
@@ -368,7 +513,7 @@ export default function WalkInApp() {
 
   const clearCart = () => {
     if (pending || busy) return
-    setCart({ ...EMPTY_CART })
+    setCart({ ...WALK_IN_EMPTY_CART })
     setConfirmed(false)
     setReview(false)
     setQrModalOpen(false)
@@ -386,7 +531,7 @@ export default function WalkInApp() {
 
   const settle = (sale) => {
     setPending(null)
-    setCart({ ...EMPTY_CART })
+    setCart({ ...WALK_IN_EMPTY_CART })
     setConfirmed(false)
     setReview(false)
     setQrModalOpen(false)
@@ -502,7 +647,7 @@ export default function WalkInApp() {
               <p className="staff-muted">Quick combos or tap items below. Combo savings apply automatically.</p>
 
               <div className="staff-combos" role="group" aria-label="Quick combos">
-                {COMBOS.map((combo) => (
+                {WALK_IN_COMBOS.map((combo) => (
                   <button
                     key={combo.name}
                     type="button"
@@ -642,6 +787,65 @@ export default function WalkInApp() {
 
             {/* RIGHT COLUMN ON DESKTOP / SEPARATE TABS ON PHONE */}
             <div className="staff-side-col">
+              {/* PRE-ORDERS PICKUP PANEL */}
+              <section className={`staff-panel staff-pane ${tab === 'preorders' ? 'is-active' : ''}`} aria-label="Pre-order pickups">
+                <div className="staff-row">
+                  <h2>Pre-order pickups</h2>
+                  <button type="button" disabled={busy} onClick={() => refreshPreorders()}>Refresh</button>
+                </div>
+                <p className="staff-muted">Search by customer name or order ID (e.g. WB-A1B2). Only orders confirmed paid by admin can be marked picked up.</p>
+
+                <div className="staff-search-wrap">
+                  <input
+                    type="search"
+                    className="staff-search"
+                    placeholder="Search name or order ID (e.g. WB-…)"
+                    aria-label="Search pre-orders by name or ID"
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                  />
+                  {search && (
+                    <button type="button" className="staff-search-clear" onClick={() => setSearch('')} aria-label="Clear search">
+                      ×
+                    </button>
+                  )}
+                </div>
+
+                <div className="staff-filters" role="group" aria-label="Filter pre-orders">
+                  {[
+                    ['all', `All (${preorders.length})`],
+                    ['ready', `Ready (${readyPreorderCount})`],
+                    ['unpaid', `Unpaid (${preorders.filter((o) => !o.confirmed && !o.picked_up).length})`],
+                    ['picked', `Done (${preorders.filter((o) => o.picked_up).length})`],
+                  ].map(([id, label]) => (
+                    <button
+                      key={id}
+                      type="button"
+                      className={preorderFilter === id ? 'is-active' : ''}
+                      onClick={() => setPreorderFilter(id)}
+                    >
+                      {label}
+                    </button>
+                  ))}
+                </div>
+
+                {preorderError && <p role="alert" className="staff-error">{preorderError}</p>}
+
+                {!preordersLoaded && !preorderError ? (
+                  <p className="staff-muted">Loading pre-orders…</p>
+                ) : filteredPreorders.length ? (
+                  <div className="staff-preorder-list">
+                    {filteredPreorders.map((order) => (
+                      <PreorderCard key={order.code} order={order} busy={busy} onConfirmPickup={confirmPickup} />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="staff-muted">
+                    {search.trim() ? `No pre-orders matching "${search.trim()}".` : 'No pre-orders in this view.'}
+                  </p>
+                )}
+              </section>
+
               {/* SUMMARY PANEL */}
               <section className={`staff-panel staff-pane ${tab === 'summary' ? 'is-active' : ''}`} aria-label="Today's summary">
                 <div className="staff-row">
@@ -715,8 +919,16 @@ export default function WalkInApp() {
           {/* MOBILE BOTTOM TAB BAR */}
           <nav className="staff-tabs" aria-label="POS sections">
             <button type="button" className={tab === 'sale' ? 'is-active' : ''} onClick={() => setTab('sale')}>
-              <span>New Sale</span>
+              <span>Sale</span>
               {pricing.items > 0 && <em className="staff-tab-badge">{pricing.items}</em>}
+            </button>
+            <button
+              type="button"
+              className={tab === 'preorders' ? 'is-active' : ''}
+              onClick={() => { setTab('preorders'); refreshPreorders() }}
+            >
+              <span>Pickups</span>
+              {readyPreorderCount > 0 && <em className="staff-tab-badge">{readyPreorderCount}</em>}
             </button>
             <button type="button" className={tab === 'summary' ? 'is-active' : ''} onClick={() => setTab('summary')}>
               <span>Summary</span>
