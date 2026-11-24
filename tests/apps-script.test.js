@@ -9,10 +9,15 @@ const salesHeaders = ['sale_id', 'request_id', 'timestamp', 'staff_id', 'sale_ty
 const itemHeaders = ['sale_id', 'product_id', 'product_name', 'quantity', 'unit_price', 'line_total']
 const auditHeaders = ['timestamp', 'sale_id', 'action', 'staff_id', 'reason']
 
-function harness() {
+function harness({ empty = false, sheetIdProp = 'sheet-id' } = {}) {
   class Sheet {
-    constructor(headers) { this.rows = [headers]; this.failAfterAppend = false }
+    constructor(headers) {
+      this.rows = headers ? [headers] : []
+      this.frozenRows = 0
+      this.failAfterAppend = false
+    }
     getLastRow() { return this.rows.length }
+    setFrozenRows(n) { this.frozenRows = n }
     getRange(row, col, height = 1, width = 1) {
       return {
         getValues: () => Array.from({ length: height }, (_, i) => Array.from({ length: width }, (_, j) => this.rows[row - 1 + i]?.[col - 1 + j] ?? '')),
@@ -25,12 +30,29 @@ function harness() {
       if (this.failAfterAppend) { this.failAfterAppend = false; throw new Error('Simulated lost write response') }
     }
   }
-  const sheets = { Sales: new Sheet(salesHeaders), SaleItems: new Sheet(itemHeaders), AuditLog: new Sheet(auditHeaders) }
+  const sheets = empty
+    ? { Orders: new Sheet(['Received', 'Code']) }
+    : { Sales: new Sheet(salesHeaders), SaleItems: new Sheet(itemHeaders), AuditLog: new Sheet(auditHeaders) }
+  let openedSheetId = null
   const lock = { acquired: false, blocked: false, calls: 0, tryLock() { this.calls++; if (this.blocked || this.acquired) return false; this.acquired = true; return true }, releaseLock() { this.acquired = false } }
   const context = {
     console: { error() {} },
-    SpreadsheetApp: { openById: () => ({ getSheetByName: (name) => sheets[name] }), flush() {} },
-    PropertiesService: { getScriptProperties: () => ({ getProperty: (name) => name === 'SHEET_ID' ? 'sheet-id' : 'secret' }) },
+    Logger: { log() {} },
+    SpreadsheetApp: {
+      openById: (id) => {
+        openedSheetId = id
+        return {
+          getId: () => id,
+          getSheetByName: (name) => sheets[name] || null,
+          insertSheet: (name) => {
+            sheets[name] = new Sheet()
+            return sheets[name]
+          },
+        }
+      },
+      flush() {},
+    },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: (name) => name === 'SHEET_ID' ? sheetIdProp : 'secret' }) },
     LockService: { getScriptLock: () => lock },
     Utilities: {
       computeHmacSha256Signature: (text, secret) => [...createHmac('sha256', secret).update(text).digest()],
@@ -48,8 +70,20 @@ function harness() {
     return JSON.parse(context.doPost({ postData: { contents: JSON.stringify({ message, signature }) } }).text)
   }
   const raw = (message, signature) => JSON.parse(context.doPost({ postData: { contents: JSON.stringify({ message, signature }) } }).text)
-  return { sheets, lock, call, raw }
+  return { sheets, lock, call, raw, getOpenedSheetId: () => openedSheetId, context }
 }
+
+test('auto-creates Sales, SaleItems, and AuditLog tabs inside the pre-order spreadsheet without touching Orders', () => {
+  const { sheets, call, getOpenedSheetId } = harness({ empty: true, sheetIdProp: '' })
+  const res = call('summary', {})
+  assert.equal(res.ok, true)
+  assert.equal(getOpenedSheetId(), '16jAoXImadvU2clmyGB-t9A3UChbKICS1BEiPpYtIiw0')
+  assert.deepEqual(sheets.Sales.rows[0], salesHeaders)
+  assert.deepEqual(sheets.SaleItems.rows[0], itemHeaders)
+  assert.deepEqual(sheets.AuditLog.rows[0], auditHeaders)
+  assert.equal(sheets.Sales.frozenRows, 1)
+  assert.deepEqual(sheets.Orders.rows[0], ['Received', 'Code'])
+})
 
 test('duplicate and concurrent requests do not create extra sales', () => {
   const { sheets, lock, call } = harness()
@@ -132,4 +166,66 @@ test('unsigned requests cannot read sales', () => {
   const { sheets, raw } = harness()
   assert.equal(raw(JSON.stringify({ action: 'sales', payload: {}, timestamp: Date.now() }), '').code, 'AUTH')
   assert.equal(sheets.Sales.rows.length, 1)
+})
+
+test('unified pre-order Apps Script handles Orders and walk-in tabs in the same spreadsheet', () => {
+  class Sheet {
+    constructor(headers) { this.rows = headers ? [headers] : []; this.frozenRows = 0 }
+    getLastRow() { return this.rows.length }
+    setFrozenRows(n) { this.frozenRows = n }
+    getRange(row, col, height = 1, width = 1) {
+      return {
+        getValues: () => Array.from({ length: height }, (_, i) => Array.from({ length: width }, (_, j) => this.rows[row - 1 + i]?.[col - 1 + j] ?? '')),
+        setValue: (value) => { this.rows[row - 1][col - 1] = value },
+        setValues: (values) => { values.forEach((line, i) => line.forEach((value, j) => { this.rows[row - 1 + i][col - 1 + j] = value })) },
+      }
+    }
+    appendRow(values) { this.rows.push([...values]) }
+  }
+  const sheets = {}
+  const book = {
+    getSheetByName: (name) => sheets[name] || null,
+    insertSheet: (name) => { sheets[name] = new Sheet(); return sheets[name] },
+  }
+  const lock = { tryLock: () => true, releaseLock() {} }
+  const context = {
+    console: { error() {} },
+    Logger: { log() {} },
+    Session: { getScriptTimeZone: () => 'Asia/Bangkok' },
+    DriveApp: { getFoldersByName: () => ({ hasNext: () => false }), createFolder: () => ({}) },
+    SpreadsheetApp: { getActiveSpreadsheet: () => book, openById: () => book, flush() {} },
+    PropertiesService: { getScriptProperties: () => ({ getProperty: (name) => name === 'WALKIN_SHARED_SECRET' ? 'secret' : '' }) },
+    LockService: { getScriptLock: () => lock },
+    Utilities: {
+      computeHmacSha256Signature: (text, secret) => [...createHmac('sha256', secret).update(text).digest()],
+      computeDigest: (_algorithm, text) => [...createHash('sha256').update(text).digest()],
+      DigestAlgorithm: { SHA_256: 'SHA_256' },
+      getUuid: randomUUID,
+      formatDate: (date, _zone, pattern) => new Date(date.getTime() + 7 * 3600000).toISOString().slice(0, pattern === 'yyyy-MM-dd' ? 10 : 19),
+    },
+    ContentService: { MimeType: { JSON: 'json' }, createTextOutput: (text) => ({ text, setMimeType() { return this } }) },
+  }
+  vm.runInNewContext(readFileSync(new URL('../apps-script/Code.gs', import.meta.url), 'utf8'), context)
+
+  // 1. Pre-order writes to Orders tab
+  const orderRes = JSON.parse(context.doPost({
+    postData: { contents: JSON.stringify({ type: 'order', code: 'WB-AB12', name: 'Aye', contact: '0812345678', pickupDate: 'Thu, 26 Nov 2026', slot: '12:00 PM', items: ['1 × Classic'], wafers: 1, teas: 0, subtotal: 45, discount: 5, total: 40 }) },
+  }).text)
+  assert.equal(orderRes.ok, true)
+  assert.equal(sheets.Orders.rows.length, 2)
+
+  // 2. Walk-in sale writes to Sales, SaleItems, AuditLog tabs in the SAME spreadsheet
+  const message = JSON.stringify({
+    action: 'create',
+    payload: { request_id: randomUUID(), staff_id: 'admin@example.com', payment_method: 'PromptPay', ...calculateSale({ classic: 1, teaRegular: 1 }) },
+    timestamp: Date.now(),
+  })
+  const signature = createHmac('sha256', 'secret').update(message).digest('hex')
+  const walkinRes = JSON.parse(context.doPost({ postData: { contents: JSON.stringify({ message, signature }) } }).text)
+  assert.equal(walkinRes.ok, true)
+  assert.equal(walkinRes.data.total, 75)
+  assert.equal(sheets.Sales.rows.length, 2)
+  assert.equal(sheets.SaleItems.rows.length, 3)
+  assert.equal(sheets.AuditLog.rows.length, 2)
+  assert.equal(sheets.Orders.rows.length, 2)
 })

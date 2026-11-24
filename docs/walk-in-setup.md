@@ -1,76 +1,44 @@
 # Walk-in sales setup
 
-This feature is on `/staff/walk-in`. The public site and pre-order endpoint are separate. The staff page does not collect customer names or accounts. Staff must verify cash or PromptPay receipt themselves before saving; the system does not query a bank.
+This feature is on `/staff/walk-in`. Staff sign in with an email and password configured in server-only environment variables (no Google OAuth required). Walk-in records are saved into the **same Google Spreadsheet as pre-orders** (`16jAoXImadvU2clmyGB-t9A3UChbKICS1BEiPpYtIiw0`), inside three new tabs (`Sales`, `SaleItems`, and `AuditLog`) alongside the existing `Orders` tab.
 
-## 1. Create the spreadsheet
+The staff page is optimized for phones with bottom tabs (**New Sale**, **Summary**, **History**), quick combo buttons, a sticky total bar, and a live exact-amount **PromptPay QR** code (with a full-screen customer QR modal). Staff must still verify cash in hand or bank app confirmation before saving; the system does not query a bank.
 
-Create a Google spreadsheet that only the booth managers can edit. Set its time zone to **Asia/Bangkok**. Create three worksheets with these exact names and put the following headers in row 1, in order:
+## 1. Update the Apps Script on your pre-order spreadsheet (recommended: one script, one sheet)
 
-**Sales**
+1. Open your pre-order spreadsheet (`16jAoXImadvU2clmyGB-t9A3UChbKICS1BEiPpYtIiw0`), then open **Extensions → Apps Script**.
+2. Replace `Code.gs` with [`apps-script/Code.gs`](../apps-script/Code.gs). It keeps pre-orders & slips writing to `Orders`, and handles HMAC-signed walk-in POS calls writing to three new tabs (`Sales`, `SaleItems`, `AuditLog`) in the **same spreadsheet**.
+3. In **Project Settings → Script Properties**, add `WALKIN_SHARED_SECRET` (same 32-byte hex secret as Vercel's `WALKIN_APPS_SCRIPT_SECRET`).
+4. Select the `setup` function in the toolbar and click **Run** once. It keeps `Orders` intact and automatically creates the `Sales`, `SaleItems`, and `AuditLog` tabs with frozen row 1 headers.
+5. Deploy a new version: **Deploy → Manage deployments → Edit → New version → Deploy**.
+6. In Vercel, `WALKIN_APPS_SCRIPT_URL` can point to this same `/exec` URL (or be omitted so it automatically reuses `VITE_ORDER_ENDPOINT`).
 
-```text
-sale_id,request_id,timestamp,staff_id,sale_type,subtotal,combo_discount,total,currency,payment_method,payment_status,sale_status,voided_at,void_reason,voided_by,record_state,request_hash
-```
+*(If you still prefer keeping a separate Apps Script deployment, [`walkin-apps-script/Code.gs`](../walkin-apps-script/Code.gs) also points to the same pre-order spreadsheet `16jAoXImadvU2clmyGB-t9A3UChbKICS1BEiPpYtIiw0` and auto-creates `Sales`, `SaleItems`, and `AuditLog`.)*
 
-**SaleItems**
+## 2. Configure staff accounts & Vercel environment variables
 
-```text
-sale_id,product_id,product_name,quantity,unit_price,line_total
-```
-
-**AuditLog**
-
-```text
-timestamp,sale_id,action,staff_id,reason
-```
-
-The last three Sales columns support void accountability and recovery from incomplete writes. Do not edit, sort, or delete rows while the booth is taking sales. The dashboard recognizes only `record_state=COMPLETED`, `sale_status=completed`, and `payment_status=paid` for revenue.
-
-## 2. Deploy the separate Apps Script
-
-1. Open **Extensions → Apps Script** from that spreadsheet and replace its `Code.gs` with [`walkin-apps-script/Code.gs`](../walkin-apps-script/Code.gs).
-2. In **Project Settings → Script Properties**, add `SHEET_ID` (the ID between `/d/` and `/edit` in the spreadsheet URL) and `WALKIN_SHARED_SECRET` (a new random secret of at least 32 bytes). For example, generate one locally with `node -e "console.log(require('node:crypto').randomBytes(32).toString('hex'))"`. Keep it private.
-3. Deploy as a **Web app**, executing as the owner. Select access **Anyone** so the Vercel server can call it without an interactive Google session. Every action, including reads, requires a valid HMAC signature and a recent timestamp; callers without the secret cannot write or read sales. The web app URL itself is not a credential.
-4. Copy the `/exec` deployment URL into the server-only `WALKIN_APPS_SCRIPT_URL` variable. When changing `Code.gs`, deploy a new version so the live URL runs the new code.
-
-The Apps Script HMAC secret must match the Vercel secret. Rotate both together if it is exposed. The deployment should be used only for walk-in data; leave the pre-order Apps Script deployment alone.
-
-## 3. Configure Google sign-in
-
-In Google Cloud Console, create a **Web application OAuth client ID** for the staff page. Configure the OAuth consent screen as needed and add your Vercel domain plus local development origin (usually `http://localhost:3000` for `vercel dev`) as authorized JavaScript origins. If the consent screen is in testing mode, add each staff account as a test user.
-
-Set the same client ID as `VITE_GOOGLE_CLIENT_ID` (public, built into the staff page) and `GOOGLE_CLIENT_ID` (server-side audience check). Add comma-separated, exact Google email addresses to `STAFF_ALLOWED_EMAILS`. Add manager email addresses to `STAFF_VOID_EMAILS`; each void manager must also appear in `STAFF_ALLOWED_EMAILS`. Only a verified Google ID token for an allowed address can call the staff API. Sign-in tokens are kept in page memory and are not written to local storage.
-
-## 4. Configure Vercel
-
-Keep the Vercel project root at this repository and the output directory at `dist`. Add these environment variables to the intended Preview/Production environments:
+Add these environment variables in Vercel (**Project Settings → Environment Variables**) for Production and Preview, then redeploy:
 
 | Name | Visibility | Value |
 |---|---|---|
-| `VITE_GOOGLE_CLIENT_ID` | Public | OAuth web client ID |
-| `GOOGLE_CLIENT_ID` | Server only | Same OAuth web client ID |
-| `STAFF_ALLOWED_EMAILS` | Server only | Comma-separated staff emails |
-| `STAFF_VOID_EMAILS` | Server only | Comma-separated manager emails |
-| `WALKIN_APPS_SCRIPT_URL` | Server only | Separate Apps Script `/exec` URL |
-| `WALKIN_APPS_SCRIPT_SECRET` | Server only | Same secret as Script Property |
+| `VITE_ORDER_ENDPOINT` | Public | Pre-order & walk-in Apps Script `/exec` URL |
+| `VITE_PROMPTPAY_ID` | Public | PromptPay mobile number or ID (generates exact-amount QR codes) |
+| `STAFF_ACCOUNTS` | Server only | Comma-separated `email:password:role` entries, e.g. `admin@example.com:StrongPass123:admin,staff@example.com:BoothPass123:staff` |
+| `STAFF_SESSION_SECRET` | Server only | Optional random secret for signing 12-hour staff sessions (defaults to `WALKIN_APPS_SCRIPT_SECRET` if omitted) |
+| `WALKIN_APPS_SCRIPT_SECRET` | Server only | Same HMAC secret as `WALKIN_SHARED_SECRET` in Script Properties |
+| `WALKIN_APPS_SCRIPT_URL` | Server only | Optional — falls back to `VITE_ORDER_ENDPOINT` if using the unified Apps Script |
 
-Do not put the secret, spreadsheet ID, or staff allowlists in a `VITE_` variable. The existing `VITE_ORDER_ENDPOINT` and `VITE_PROMPTPAY_ID` are unrelated and should remain as configured for pre-orders. Adding or changing environment variables requires a new Vercel build/deployment. Do not deploy this feature until a manager has tested the spreadsheet and staff access.
+Roles in `STAFF_ACCOUNTS`:
+- `admin` (or `manager` / `void`): can record sales, view summary/history, and **void** completed sales.
+- `staff` (default if omitted): can record sales and view summary/history, but cannot void sales.
 
-## 5. Run and verify locally
+Alternatively, for a single admin account, you can set `STAFF_LOGIN_EMAIL` and `STAFF_LOGIN_PASSWORD` instead of `STAFF_ACCOUNTS`.
 
-1. Run `npm ci`, `npm test`, and `npm run build`.
-2. Copy [`.env.walkin.example`](../.env.walkin.example) to `.env.local` and fill in the values for a **test** spreadsheet and script deployment. Preserve any existing pre-order values already in `.env.local`.
-3. Use Vercel CLI `vercel dev` from the repository root to run the static site and `/api/staff/*` functions together. Plain `npm run dev` serves the staff UI but not the Vercel Functions.
-4. Open `/staff/walk-in`, sign in with an allowed Google account, and record one test Cash sale and one test PromptPay sale. Confirm Sales, SaleItems, AuditLog, history, and summary. Test a void with a manager account and confirm revenue decreases while history remains.
-5. Check that an unlisted Google account cannot read sales, a listed non-manager cannot void, and the public pre-order page still loads.
+Never put `STAFF_ACCOUNTS`, `STAFF_LOGIN_PASSWORD`, `STAFF_SESSION_SECRET`, or `WALKIN_APPS_SCRIPT_SECRET` in a `VITE_` variable.
 
-For an uncertain network result, the staff page keeps the same request ID and cart locally. Use **Check status**, then **Retry same request** if needed. Never create a new sale ID to retry an uncertain payment. Do not clear the pending request until the completed sale is shown or a manager has investigated it.
+## 3. Run and verify locally
 
-## Operational limits and troubleshooting
-
-- **No automatic payment verification:** The checkbox records staff confirmation. Check the bank app for PromptPay or cash in hand before saving. Unconfirmed payments should not be entered as completed sales.
-- **Apps Script and Sheets are not transactional across worksheets:** The script writes a `PENDING` Sales record, reconciles item rows and the audit row under a script lock, then marks the sale `COMPLETED`. A partial write stays out of history and revenue until the same request ID is retried. Do not delete pending rows manually during the event.
-- **Apps Script quotas and timeouts:** A quota or timeout can leave a pending request. Check its status and retry with the same ID. Review Apps Script **Executions** for server errors. If a request remains pending, keep its ID and ask a manager to inspect the three worksheets.
-- **Sign-in error:** Check the Google authorized JavaScript origin, test users, both client ID values, and the staff allowlist. Sign in again when the token expires.
-- **Storage unavailable:** Check both copies of the HMAC secret, the `/exec` URL, the spreadsheet ID, sheet names, and row 1 headers. A new Apps Script version must be deployed after code changes.
-- **Do not expose records:** Keep the spreadsheet shared only with managers. The staff page route is publicly reachable, but every data API call verifies a Google token and an allowlist; the Apps Script endpoint verifies the server HMAC signature.
+1. Run `npm test` and `npm run build` inside `website/`.
+2. Ensure `.env.local` has `STAFF_ACCOUNTS`, `VITE_PROMPTPAY_ID`, `VITE_ORDER_ENDPOINT` (or `WALKIN_APPS_SCRIPT_URL`), and `WALKIN_APPS_SCRIPT_SECRET`.
+3. Run `npm run dev:full` from `website/` so both the Vite frontend and `/api/staff/*` Vercel Functions run together.
+4. Open `http://localhost:3000/staff/walk-in`, sign in with your configured email & password, test a Cash sale and a PromptPay QR sale, and verify `Sales`, `SaleItems`, and `AuditLog` tabs in your pre-order spreadsheet.

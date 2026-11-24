@@ -1,7 +1,7 @@
 import { createHmac } from 'node:crypto'
 
 export async function sheets(action, payload) {
-  const url = process.env.WALKIN_APPS_SCRIPT_URL
+  const url = process.env.WALKIN_APPS_SCRIPT_URL || process.env.VITE_ORDER_ENDPOINT
   const secret = process.env.WALKIN_APPS_SCRIPT_SECRET
   if (!url || !secret) throw Object.assign(new Error('Walk-in storage is not configured.'), { status: 503 })
   const message = JSON.stringify({ action, payload, timestamp: Date.now() })

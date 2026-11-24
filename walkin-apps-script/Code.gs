@@ -1,9 +1,24 @@
-// Deploy as a separate web app. Set SHEET_ID and WALKIN_SHARED_SECRET in Script Properties.
+// Deploy as a Web App. Set WALKIN_SHARED_SECRET in Script Properties.
+// Optional: set SHEET_ID in Script Properties to override the default pre-order spreadsheet.
+const DEFAULT_SHEET_ID = '16jAoXImadvU2clmyGB-t9A3UChbKICS1BEiPpYtIiw0';
 const ZONE = 'Asia/Bangkok';
 const SALES_HEADERS = ['sale_id', 'request_id', 'timestamp', 'staff_id', 'sale_type', 'subtotal', 'combo_discount', 'total', 'currency', 'payment_method', 'payment_status', 'sale_status', 'voided_at', 'void_reason', 'voided_by', 'record_state', 'request_hash'];
 const ITEM_HEADERS = ['sale_id', 'product_id', 'product_name', 'quantity', 'unit_price', 'line_total'];
 const AUDIT_HEADERS = ['timestamp', 'sale_id', 'action', 'staff_id', 'reason'];
 const PRODUCT_IDS = ['classic', 'choco', 'mixed', 'teaRegular', 'teaLess'];
+
+function doGet() {
+  return ContentService.createTextOutput('Walk-in sales endpoint is running.');
+}
+
+// Run once in the Apps Script editor to auto-create Sales, SaleItems, and AuditLog tabs
+// inside the pre-order spreadsheet without touching the existing Orders tab.
+function setup() {
+  const book = openBook_();
+  checkSheets_(book);
+  SpreadsheetApp.flush();
+  Logger.log('Ready. Sales, SaleItems, and AuditLog tabs are prepared in spreadsheet ' + book.getId());
+}
 
 function doPost(e) {
   try {
@@ -20,7 +35,7 @@ function doPost(e) {
     if (!['create', 'status', 'sales', 'summary', 'void'].includes(request.action) || !request.payload || typeof request.payload !== 'object') {
       return json_({ ok: false, code: 'INVALID', error: 'Invalid action.' });
     }
-    const book = SpreadsheetApp.openById(PropertiesService.getScriptProperties().getProperty('SHEET_ID'));
+    const book = openBook_();
     checkSheets_(book);
     const actions = { create: create_, status: status_, sales: sales_, summary: summary_, void: void_ };
     return json_({ ok: true, data: actions[request.action](book, request.payload) });
@@ -29,6 +44,14 @@ function doPost(e) {
     console.error(error);
     return json_({ ok: false, code, error: code === 'STORAGE' ? 'Storage operation failed. Check request status.' : error.message });
   }
+}
+
+function openBook_() {
+  const sheetId = PropertiesService.getScriptProperties().getProperty('SHEET_ID') || DEFAULT_SHEET_ID;
+  if (sheetId) return SpreadsheetApp.openById(sheetId);
+  const active = SpreadsheetApp.getActiveSpreadsheet();
+  if (!active) fail_('STORAGE', 'Missing SHEET_ID.');
+  return active;
 }
 
 function json_(value) {
@@ -61,8 +84,19 @@ function dateText_(value) {
 }
 
 function sheet_(book, name, headers) {
-  const sheet = book.getSheetByName(name);
-  if (!sheet) fail_('STORAGE', `Missing ${name} worksheet.`);
+  let sheet = book.getSheetByName(name);
+  if (!sheet) {
+    if (typeof book.insertSheet !== 'function') fail_('STORAGE', `Missing ${name} worksheet.`);
+    sheet = book.insertSheet(name);
+    sheet.appendRow(headers);
+    if (typeof sheet.setFrozenRows === 'function') sheet.setFrozenRows(1);
+    return sheet;
+  }
+  if (sheet.getLastRow() === 0) {
+    sheet.appendRow(headers);
+    if (typeof sheet.setFrozenRows === 'function') sheet.setFrozenRows(1);
+    return sheet;
+  }
   const found = sheet.getRange(1, 1, 1, headers.length).getValues()[0];
   if (headers.some((h, i) => found[i] !== h)) fail_('STORAGE', `Incorrect ${name} headers.`);
   return sheet;

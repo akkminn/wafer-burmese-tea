@@ -1,68 +1,146 @@
-import { createPublicKey, verify } from 'node:crypto'
+import { createHash, createHmac, timingSafeEqual } from 'node:crypto'
 
-const JWKS_URL = 'https://www.googleapis.com/oauth2/v3/certs'
-let keysCache = { expires: 0, keys: [] }
-
-function emails(value) {
-  return new Set((value || '').split(',').map((s) => s.trim().toLowerCase()).filter(Boolean))
-}
+const SESSION_TTL_SECONDS = 12 * 60 * 60
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 
 function denied(message = 'Your sign-in expired. Sign in again.') {
   return Object.assign(new Error(message), { status: 401 })
 }
 
-async function googleKeys() {
-  if (Date.now() < keysCache.expires && keysCache.keys.length) return keysCache.keys
-  const response = await fetch(JWKS_URL, { signal: AbortSignal.timeout(7000) })
-  if (!response.ok) throw new Error('Could not retrieve Google signing keys.')
-  const data = await response.json()
-  if (!Array.isArray(data.keys)) throw new Error('Invalid Google signing keys.')
-  const maxAge = Number(/max-age=(\d+)/.exec(response.headers.get('cache-control') || '')?.[1] || 300)
-  keysCache = { keys: data.keys, expires: Date.now() + Math.min(maxAge, 3600) * 1000 }
-  return keysCache.keys
+function digest(value) {
+  return createHash('sha256').update(String(value ?? '')).digest()
 }
 
-export async function verifyGoogleToken(token, clientId) {
-  if (typeof token !== 'string' || token.length > 10000) throw denied()
-  const pieces = token.split('.')
-  if (pieces.length !== 3) throw denied()
-  let header, payload
-  try {
-    header = JSON.parse(Buffer.from(pieces[0], 'base64url').toString('utf8'))
-    payload = JSON.parse(Buffer.from(pieces[1], 'base64url').toString('utf8'))
-  } catch {
-    throw denied()
+function safeEqual(a, b) {
+  return timingSafeEqual(digest(a), digest(b))
+}
+
+function sessionSecret(env = process.env) {
+  return env.STAFF_SESSION_SECRET || env.WALKIN_APPS_SCRIPT_SECRET || ''
+}
+
+function isVoidRole(role) {
+  return ['admin', 'manager', 'void'].includes(String(role || '').trim().toLowerCase())
+}
+
+export function parseAccounts(env = process.env) {
+  const accounts = []
+  const raw = (env.STAFF_ACCOUNTS || '').trim()
+  if (raw) {
+    if (raw.startsWith('[')) {
+      let parsed
+      try {
+        parsed = JSON.parse(raw)
+      } catch {
+        throw Object.assign(new Error('Staff accounts configuration is invalid.'), { status: 503 })
+      }
+      if (!Array.isArray(parsed)) throw Object.assign(new Error('Staff accounts configuration is invalid.'), { status: 503 })
+      for (const item of parsed) {
+        const email = String(item?.email || '').trim().toLowerCase()
+        const password = String(item?.password ?? '')
+        if (!EMAIL_PATTERN.test(email) || !password) continue
+        accounts.push({ email, password, canVoid: item.canVoid === true || isVoidRole(item.role) })
+      }
+    } else {
+      for (const entry of raw.split(/[\r\n,]+/).map((s) => s.trim()).filter(Boolean)) {
+        const firstColon = entry.indexOf(':')
+        if (firstColon < 1) continue
+        const email = entry.slice(0, firstColon).trim().toLowerCase()
+        let rest = entry.slice(firstColon + 1)
+        let role = 'staff'
+        const lastColon = rest.lastIndexOf(':')
+        if (lastColon > 0) {
+          const maybeRole = rest.slice(lastColon + 1).trim().toLowerCase()
+          if (['admin', 'manager', 'void', 'staff'].includes(maybeRole)) {
+            role = maybeRole
+            rest = rest.slice(0, lastColon)
+          }
+        }
+        if (!EMAIL_PATTERN.test(email) || !rest) continue
+        accounts.push({ email, password: rest, canVoid: isVoidRole(role) })
+      }
+    }
   }
-  if (header.alg !== 'RS256' || typeof header.kid !== 'string') throw denied()
-  const key = (await googleKeys()).find((item) => item.kid === header.kid && item.kty === 'RSA' && item.use === 'sig')
-  if (!key) throw denied()
-  let valid = false
+
+  const singleEmail = (env.STAFF_LOGIN_EMAIL || '').trim().toLowerCase()
+  const singlePassword = env.STAFF_LOGIN_PASSWORD || ''
+  if (EMAIL_PATTERN.test(singleEmail) && singlePassword && !accounts.some((a) => a.email === singleEmail)) {
+    accounts.push({ email: singleEmail, password: singlePassword, canVoid: true })
+  }
+
+  return accounts
+}
+
+export function verifyCredentials(emailInput, passwordInput, env = process.env) {
+  const accounts = parseAccounts(env)
+  if (!accounts.length || !sessionSecret(env)) {
+    throw Object.assign(new Error('Staff access is not configured.'), { status: 503 })
+  }
+  const email = String(emailInput || '').trim().toLowerCase()
+  const password = String(passwordInput ?? '')
+  if (!EMAIL_PATTERN.test(email) || !password) {
+    throw denied('Enter your email and password.')
+  }
+  const account = accounts.find((item) => item.email === email)
+  if (!account || !safeEqual(password, account.password)) {
+    throw denied('Invalid email or password.')
+  }
+  return { email: account.email, canVoid: account.canVoid }
+}
+
+export function createSessionToken(account, env = process.env) {
+  const secret = sessionSecret(env)
+  if (!secret) throw Object.assign(new Error('Staff access is not configured.'), { status: 503 })
+  const now = Math.floor(Date.now() / 1000)
+  const payload = {
+    sub: String(account.email).toLowerCase(),
+    canVoid: Boolean(account.canVoid),
+    iat: now,
+    exp: now + SESSION_TTL_SECONDS,
+  }
+  const body = Buffer.from(JSON.stringify(payload)).toString('base64url')
+  const sig = createHmac('sha256', secret).update(body).digest('base64url')
+  return `${body}.${sig}`
+}
+
+export function verifySessionToken(token, env = process.env) {
+  const secret = sessionSecret(env)
+  if (!secret) throw Object.assign(new Error('Staff access is not configured.'), { status: 503 })
+  if (typeof token !== 'string' || token.length > 4096) throw denied()
+  const parts = token.split('.')
+  if (parts.length !== 2 || !parts[0] || !parts[1]) throw denied()
+  const [body, sig] = parts
+  const expectedSig = createHmac('sha256', secret).update(body).digest('base64url')
+  if (!safeEqual(sig, expectedSig)) throw denied()
+  let payload
   try {
-    valid = verify('RSA-SHA256', Buffer.from(`${pieces[0]}.${pieces[1]}`), createPublicKey({ key, format: 'jwk' }), Buffer.from(pieces[2], 'base64url'))
+    payload = JSON.parse(Buffer.from(body, 'base64url').toString('utf8'))
   } catch {
     throw denied()
   }
   const now = Math.floor(Date.now() / 1000)
-  if (!valid || payload.aud !== clientId || !['accounts.google.com', 'https://accounts.google.com'].includes(payload.iss) ||
-      !Number.isInteger(payload.exp) || payload.exp <= now || !Number.isInteger(payload.iat) || payload.iat > now + 60 ||
-      (payload.nbf != null && payload.nbf > now) || typeof payload.sub !== 'string' || !payload.sub || payload.email_verified !== true) {
+  const email = String(payload?.sub || '').toLowerCase()
+  if (!EMAIL_PATTERN.test(email) || !Number.isInteger(payload.exp) || payload.exp <= now ||
+      !Number.isInteger(payload.iat) || payload.iat > now + 60) {
     throw denied()
   }
-  return payload
+  return { email, canVoid: Boolean(payload.canVoid) }
 }
 
 export async function authenticate(req, role = 'staff') {
-  const clientId = process.env.GOOGLE_CLIENT_ID
-  if (!clientId || !process.env.STAFF_ALLOWED_EMAILS) throw Object.assign(new Error('Staff access is not configured.'), { status: 503 })
-  const bearer = /^Bearer (\S+)$/.exec(req.headers.authorization || '')
-  if (!bearer) throw denied('Sign in with Google.')
-  const payload = await verifyGoogleToken(bearer[1], clientId)
-  const email = String(payload.email || '').toLowerCase()
-  if (!emails(process.env.STAFF_ALLOWED_EMAILS).has(email)) {
-    throw Object.assign(new Error('This Google account is not approved for staff access.'), { status: 403 })
+  const accounts = parseAccounts(process.env)
+  if (!accounts.length || !sessionSecret(process.env)) {
+    throw Object.assign(new Error('Staff access is not configured.'), { status: 503 })
   }
-  if (role === 'void' && !emails(process.env.STAFF_VOID_EMAILS).has(email)) {
+  const bearer = /^Bearer (\S+)$/.exec(req.headers.authorization || '')
+  if (!bearer) throw denied('Sign in to continue.')
+  const session = verifySessionToken(bearer[1], process.env)
+  const account = accounts.find((item) => item.email === session.email)
+  if (!account) {
+    throw Object.assign(new Error('This staff account is no longer active.'), { status: 403 })
+  }
+  if (role === 'void' && !account.canVoid) {
     throw Object.assign(new Error('You are not approved to void sales.'), { status: 403 })
   }
-  return { email, canVoid: emails(process.env.STAFF_VOID_EMAILS).has(email) }
+  return { email: account.email, canVoid: account.canVoid }
 }
